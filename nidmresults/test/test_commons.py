@@ -68,7 +68,7 @@ def get_turtle(provn_file):
         ttl_file_url = extracted_data.group('ttl_file');
     else:
         # Open corresponding provn file
-        logger.info(' Converting '+provn_file)
+        logger.info(f' Converting {provn_file}')
         provn_file = open(provn_file, 'r')
         ex_provn = provn_file.read()
 
@@ -91,17 +91,17 @@ def get_turtle(provn_file):
                     response = urlopen(req, timeout=10)
             except (socket.timeout, URLError, ssl.SSLError):
                 # On timeout retry
-                retry = retry + 1 
-                logger.info('Retry #'+str(retry))
+                retry += 1
+                logger.info(f'Retry #{retry}')
                 continue
             break
 
         if retry > MAX_RETRY:
-            raise Exception("Too many retry ("+str(retry)+")")
+            raise Exception(f"Too many retry ({retry})")
 
         ttl_file_url = response.geturl()
 
-    logger.info(' Loading turtle file '+ttl_file_url)
+    logger.info(f' Loading turtle file {ttl_file_url}')
 
     return ttl_file_url
 
@@ -116,39 +116,39 @@ def merge_exception_dict(excep_dict, other_except_dict):
 def display_graph(diff_graph, prefix_msg="Difference in:"):
     found_difference = False
     for s,p,o in diff_graph.triples((None,None,None)):
-            # workaround to avoid issue with "5853" being a string
-            prefix, namespace, name = diff_graph.compute_qname(p)
-            if p != NIDM_SOFTWARE_VERSION:
-                if p != FSL_FEAT_VERSION:
-                    o_name = ""
-                    if isinstance(o, rdflib.URIRef):
-                        unused, unused, o_name = diff_graph.compute_qname(o)
+        # workaround to avoid issue with "5853" being a string
+        prefix, namespace, name = diff_graph.compute_qname(p)
+        if p != NIDM_SOFTWARE_VERSION:
+            if p != FSL_FEAT_VERSION:
+                o_name = ""
+                if isinstance(o, rdflib.URIRef):
+                    unused, unused, o_name = diff_graph.compute_qname(o)
                     # Ignore prov:Location not specified explicitely
-                    if o_name != 'Location':
-                        found_difference = True
+                if o_name != 'Location':
+                    found_difference = True
 
-                        s_str = str(s)
-                        if isinstance(s, rdflib.term.URIRef) \
+                    s_str = str(s)
+                    if isinstance(s, rdflib.term.URIRef) \
                             and not isinstance(s, rdflib.term.BNode):
-                            s_str = diff_graph.qname(s)
-                        elif isinstance(s, rdflib.term.Literal):
-                            s_str = s_str+" ("+str(s.datatype)+")"
-                        p_str = str(p)
-                        if isinstance(p, rdflib.term.URIRef) \
+                        s_str = diff_graph.qname(s)
+                    elif isinstance(s, rdflib.term.Literal):
+                        s_str = f"{s_str} ({str(s.datatype)})"
+                    p_str = str(p)
+                    if isinstance(p, rdflib.term.URIRef) \
                             and not isinstance(p, rdflib.term.BNode):
-                            p_str = diff_graph.qname(p)
-                        elif isinstance(p, rdflib.term.Literal):
-                            p_str = p_str+" ("+str(p.datatype)+")"                        
-                        o_str = str(o)
-                        if isinstance(o, rdflib.term.URIRef) \
+                        p_str = diff_graph.qname(p)
+                    elif isinstance(p, rdflib.term.Literal):
+                        p_str = f"{p_str} ({str(p.datatype)})"
+                    o_str = str(o)
+                    if isinstance(o, rdflib.term.URIRef) \
                             and not isinstance(o, rdflib.term.BNode):
-                            o_str = diff_graph.qname(o)
-                        elif isinstance(o, rdflib.term.Literal):
-                            o_str = o_str+" ("+str(o.datatype)+")"    
-                                                    
-                        logger.debug("\t"+prefix_msg+' s='+s_str+\
-                                ", p="+p_str+\
-                                ", o="+o_str)
+                        o_str = diff_graph.qname(o)
+                    elif isinstance(o, rdflib.term.Literal):
+                        o_str = f"{o_str} ({str(o.datatype)})"    
+
+                    logger.debug("\t"+prefix_msg+' s='+s_str+\
+                            ", p="+p_str+\
+                            ", o="+o_str)
 
     return found_difference
 
@@ -175,12 +175,12 @@ class TimeoutError(Exception):
     pass
 
 def _get_ttl_doc_content(doc):
-    logger.info(' Opening '+doc)
+    logger.info(f' Opening {doc}')
 
     def _raise_timeout(*args):
         raise TimeoutError("end of time")
 
-    if doc.startswith("http"):      
+    if doc.startswith("http"):  
         # Number of retry
         MAX_RETRY = 15
         # Timeout after 5s
@@ -205,13 +205,13 @@ def _get_ttl_doc_content(doc):
 
             except (socket.timeout, TimeoutError, URLError):
                 # On timeout retry
-                retry = retry + 1 
-                logger.info(' Retry #'+str(retry))
+                retry += 1
+                logger.info(f' Retry #{retry}')
                 continue
             break
 
         if retry > MAX_RETRY:
-            raise Exception("Too many retry ("+str(retry)+")")
+            raise Exception(f"Too many retry ({retry})")
 
     else:
         # Document locally on disk
@@ -228,26 +228,9 @@ def compare_ttl_documents(ttl_doc1, ttl_doc2):
     doc_graph = Graph()
     doc1 = _get_ttl_doc_content(ttl_doc1)
     doc_graph.parse(data=doc1, format='turtle')
-    
+
     same_doc_graph = Graph()
     doc2 = _get_ttl_doc_content(ttl_doc2)
     same_doc_graph.parse(data=doc2, format='turtle')
 
-    found_difference = compare_graphs(same_doc_graph, doc_graph)
-
-    # # Use isomorphic to ignore BNode
-    # iso1 = to_isomorphic(same_doc_graph)
-    # iso2 = to_isomorphic(doc_graph)
-
-    # found_difference = False
-    # if iso1 != iso2:
-
-    #     in_both, in_first, in_second = graph_diff(iso1, iso2)
-
-    #     # diff_graph = (in_first+in_second)
-    #     found_difference_1 = display_graph(in_first, "\t In first: ")
-    #     found_difference_2 = display_graph(in_second, "\t In second: ")
-    #     found_difference = found_difference_1 or found_difference_2
-        
-    #                 # break;
-    return found_difference
+    return compare_graphs(same_doc_graph, doc_graph)

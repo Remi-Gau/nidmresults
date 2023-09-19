@@ -50,10 +50,7 @@ class InferenceActivity(NIDMObject):
     def __init__(self, oid=None, tail=None, label=None, contrast_name=None,
                  inference_type=None, partial_degree=None):
         super(InferenceActivity, self).__init__(oid=oid)
-        if inference_type is None:
-            self.type = NIDM_INFERENCE
-        else:
-            self.type = inference_type
+        self.type = NIDM_INFERENCE if inference_type is None else inference_type
         self.prov_type = PROV['Activity']
         if tail is None:
             tail = NIDM_ONE_TAILED_TEST
@@ -61,18 +58,15 @@ class InferenceActivity(NIDMObject):
         if label is None:
             label = "Inference"
             if contrast_name:
-                label += ": " + contrast_name
+                label += f": {contrast_name}"
         self.label = label
         self.partial_degree = partial_degree
 
     @classmethod
-    def get_query(klass, oid=None):
-        if oid is None:
-            oid_var = "?oid"
-        else:
-            oid_var = "<" + str(oid) + ">"
-
-        query = """
+    def get_query(cls, oid=None):
+        oid_var = "?oid" if oid is None else f"<{str(oid)}>"
+        return (
+            """
 prefix nidm_Inference: <http://purl.org/nidash/nidm#NIDM_0000049>
 prefix nidm_ConjunctionInference: <http://purl.org/nidash/nidm#NIDM_0000011>
 prefix nidm_hasAlternativeHypothesis: <http://purl.org/nidash/nidm#NIDM_000009\
@@ -83,23 +77,33 @@ prefix spm_PartialConjunctionDegree: <http://purl.org/nidash/spm#SPM_0000015>
 
     SELECT DISTINCT * WHERE {
     {
-    """ + oid_var + """ a nidm_Inference: .
+    """
+            + oid_var
+            + """ a nidm_Inference: .
     } UNION {
-    """ + oid_var + """ a nidm_ConjunctionInference: .
+    """
+            + oid_var
+            + """ a nidm_ConjunctionInference: .
     } UNION {
-    """ + oid_var + """ a spm_PartialConjunctionInference: .
+    """
+            + oid_var
+            + """ a spm_PartialConjunctionInference: .
     }
 
-    """ + oid_var + """ rdfs:label ?label ;
+    """
+            + oid_var
+            + """ rdfs:label ?label ;
         a ?inference_type ;
         nidm_hasAlternativeHypothesis: ?tail .
 
-    OPTIONAL {""" + oid_var + """ spm_PartialConjunctionDegree: ?partial_degree .} .
+    OPTIONAL {"""
+            + oid_var
+            + """ spm_PartialConjunctionDegree: ?partial_degree .} .
 
     FILTER ( ?inference_type NOT IN (prov:Activity))
         }
         """
-        return query
+        )
 
     def export(self, nidm_version, export_dir):
         """
@@ -132,10 +136,7 @@ class ExcursionSet(NIDMObject):
                  sha=None, filename=None, inference=None, suffix='',
                  clust_map=None, mip=None, num_clusters=None, p_value=None):
         super(ExcursionSet, self).__init__(oid)
-        if not filename:
-            filename = 'ExcursionSet' + suffix + '.nii.gz'
-        else:
-            filename = location
+        filename = f'ExcursionSet{suffix}.nii.gz' if not filename else location
         self.filename = filename
         self.file = NIDMFile(self.id, location, filename, sha)
         self.type = NIDM_EXCURSION_SET_MAP
@@ -153,13 +154,10 @@ class ExcursionSet(NIDMObject):
         self.p_value = p_value
 
     @classmethod
-    def get_query(klass, oid=None):
-        if oid is None:
-            oid_var = "?oid"
-        else:
-            oid_var = "<" + str(oid) + ">"
-
-        query = """
+    def get_query(cls, oid=None):
+        oid_var = "?oid" if oid is None else f"<{str(oid)}>"
+        return (
+            """
 prefix nidm_ExcursionSetMap: <http://purl.org/nidash/nidm#NIDM_0000025>
 prefix nidm_hasClusterLabelsMap: <http://purl.org/nidash/nidm#NIDM_0000098>
 prefix nidm_hasMaximumIntensityProjection: <http://purl.org/nidash/nidm#NIDM_0\
@@ -171,20 +169,26 @@ prefix nidm_pValue: <http://purl.org/nidash/nidm#NIDM_0000114>
 
 SELECT DISTINCT * WHERE {
 
-""" + oid_var + """ a nidm_ExcursionSetMap: ;
+"""
+            + oid_var
+            + """ a nidm_ExcursionSetMap: ;
     prov:atLocation ?location ;
     rdfs:label ?label ;
     dct:format ?fmt ;
     nfo:fileName ?filename ;
     crypto:sha512 ?sha .
 
-    OPTIONAL {""" + oid_var + """ nidm_numberOfSupraThresholdClusters: ?num_clusters .} .
-    OPTIONAL {""" + oid_var + """ nidm_pValue: ?p_value .} .
+    OPTIONAL {"""
+            + oid_var
+            + """ nidm_numberOfSupraThresholdClusters: ?num_clusters .} .
+    OPTIONAL {"""
+            + oid_var
+            + """ nidm_pValue: ?p_value .} .
 }
 
 ORDER BY ?peak_label
         """
-        return query
+        )
 
     def export(self, nidm_version, export_dir):
         """
@@ -234,7 +238,7 @@ class ClusterLabelsMap(NIDMObject):
                  sha=None, filename=None, suffix='', temporary=False):
         super(ClusterLabelsMap, self).__init__(oid)
         if not filename:
-            filename = 'ClusterLabels' + suffix + '.nii.gz'
+            filename = f'ClusterLabels{suffix}.nii.gz'
         self.filename = filename
         self.file = NIDMFile(self.id, location, filename, sha,
                              temporary=temporary)
@@ -246,24 +250,23 @@ class ClusterLabelsMap(NIDMObject):
         self.coord_space = coord_space
 
     @classmethod
-    def get_query(klass, oid=None):
-        if oid is None:
-            oid_var = "?oid"
-        else:
-            oid_var = "<" + str(oid) + ">"
-
-        query = """
+    def get_query(cls, oid=None):
+        oid_var = "?oid" if oid is None else f"<{str(oid)}>"
+        return (
+            """
 prefix nidm_ClusterLabelsMap: <http://purl.org/nidash/nidm#NIDM_0000008>
 
 SELECT DISTINCT * WHERE {
-    """ + oid_var + """ a nidm_ClusterLabelsMap: ;
+    """
+            + oid_var
+            + """ a nidm_ClusterLabelsMap: ;
         nfo:fileName ?filename ;
         crypto:sha512 ?sha ;
         prov:atLocation ?location ;
         dct:format ?fmt .
         }
         """
-        return query
+        )
 
     def export(self, nidm_version, export_dir):
         """
@@ -289,7 +292,7 @@ class HeightThreshold(NIDMObject):
                  equiv_thresh=None):
         super(HeightThreshold, self).__init__(oid=oid)
         if not stat_threshold and not p_corr_threshold and \
-           not p_uncorr_threshold and not value:
+               not p_uncorr_threshold and not value:
             raise Exception('No threshold defined')
 
         if isinstance(threshold_type, str):
@@ -297,22 +300,21 @@ class HeightThreshold(NIDMObject):
 
         thresh_desc = ""
         if stat_threshold is not None:
-            thresh_desc = "Z>" + str(stat_threshold)
+            thresh_desc = f"Z>{str(stat_threshold)}"
             if version['num'] == "1.0.0":
                 user_threshold_type = "Z-Statistic"
             else:
                 threshold_type = OBO_STATISTIC
                 value = stat_threshold
         elif p_uncorr_threshold is not None:
-            thresh_desc = "p<" + \
-                str(p_uncorr_threshold) + " (uncorrected)"
+            thresh_desc = f"p<{str(p_uncorr_threshold)} (uncorrected)"
             if version['num'] == "1.0.0":
                 user_threshold_type = "p-value uncorrected"
             else:
                 threshold_type = NIDM_P_VALUE_UNCORRECTED_CLASS
                 value = p_uncorr_threshold
         elif p_corr_threshold is not None:
-            thresh_desc = "p<" + str(p_corr_threshold) + " (FWE)"
+            thresh_desc = f"p<{str(p_corr_threshold)} (FWE)"
             if version['num'] == "1.0.0":
                 user_threshold_type = "p-value FWE"
             else:
@@ -328,29 +330,24 @@ class HeightThreshold(NIDMObject):
             self.value = value
             self.threshold_type = threshold_type
 
-        if not label:
-            self.label = "Height Threshold: " + thresh_desc
-        else:
-            self.label = label
-
-        self.type = NIDM_HEIGHT_THRESHOLD
+        self.label = f"Height Threshold: {thresh_desc}" if not label else label
         self.prov_type = PROV['Entity']
+        self.type = NIDM_HEIGHT_THRESHOLD
         self.equiv_thresh = equiv_thresh
 
     @classmethod
-    def get_query(klass, oid=None):
-        if oid is None:
-            oid_var = "?oid"
-        else:
-            oid_var = "<" + str(oid) + ">"
-
-        query = """
+    def get_query(cls, oid=None):
+        oid_var = "?oid" if oid is None else f"<{str(oid)}>"
+        return (
+            """
 prefix nidm_HeightThreshold: <http://purl.org/nidash/nidm#NIDM_0000034>
 prefix nidm_hasAlternativeHypothesis: <http://purl.org/nidash/nidm#NIDM_000009\
 7>
 
     SELECT DISTINCT * WHERE {
-    """ + oid_var + """ a nidm_HeightThreshold: ;
+    """
+            + oid_var
+            + """ a nidm_HeightThreshold: ;
         a ?threshold_type ;
         rdfs:label ?label ;
         prov:value ?value .
@@ -358,7 +355,7 @@ prefix nidm_hasAlternativeHypothesis: <http://purl.org/nidash/nidm#NIDM_000009\
     FILTER ( ?threshold_type NOT IN (prov:Entity, nidm_HeightThreshold:) )
 }
         """
-        return query
+        )
 
     def export(self, version, export_dir):
         """
@@ -409,36 +406,35 @@ class ExtentThreshold(NIDMObject):
 
         if threshold_type is not None:
             self.threshold_type = threshold_type
+        elif extent is not None:
+            # NIDM-Results 1.0.0
+            user_threshold_type = "Cluster-size in voxels"
+            thresh_desc = f"k>{str(extent)}"
+            # NIDM-Results > 1.0.0
+            threshold_type = OBO_STATISTIC
+        elif p_uncorr is not None:
+            thresh_desc = f"p<{str(self.p_uncorr)} (uncorrected)"
+            # NIDM-Results 1.0.0
+            user_threshold_type = "p-value uncorrected"
+            # NIDM-Results > 1.0.0
+            threshold_type = NIDM_P_VALUE_UNCORRECTED_CLASS
+            value = p_uncorr
+        elif p_corr is not None:
+            thresh_desc = f"p<{str(p_corr)} (FWE)"
+            # NIDM-Results 1.0.0
+            user_threshold_type = "p-value FWE"
+            # NIDM-Results > 1.0.0
+            threshold_type = OBO_P_VALUE_FWER
+            value = p_corr
         else:
-            if extent is not None:
-                thresh_desc = "k>" + str(extent)
-                # NIDM-Results 1.0.0
-                user_threshold_type = "Cluster-size in voxels"
-                # NIDM-Results > 1.0.0
-                threshold_type = OBO_STATISTIC
-            elif p_uncorr is not None:
-                thresh_desc = "p<" + str(self.p_uncorr) + " (uncorrected)"
-                # NIDM-Results 1.0.0
-                user_threshold_type = "p-value uncorrected"
-                # NIDM-Results > 1.0.0
-                threshold_type = NIDM_P_VALUE_UNCORRECTED_CLASS
-                value = p_uncorr
-            elif p_corr is not None:
-                thresh_desc = "p<" + str(p_corr) + " (FWE)"
-                # NIDM-Results 1.0.0
-                user_threshold_type = "p-value FWE"
-                # NIDM-Results > 1.0.0
-                threshold_type = OBO_P_VALUE_FWER
-                value = p_corr
+            thresh_desc = "k>=0"
+            extent = 0
+            if version['num'] == "1.0.0":
+                p_uncorr = 1.0
+                p_corr = 1.0
+                user_threshold_type = None
             else:
-                thresh_desc = "k>=0"
-                extent = 0
-                if version['num'] == "1.0.0":
-                    p_uncorr = 1.0
-                    p_corr = 1.0
-                    user_threshold_type = None
-                else:
-                    threshold_type = OBO_STATISTIC
+                threshold_type = OBO_STATISTIC
 
         self.threshold_type = threshold_type
         self.value = value
@@ -453,37 +449,38 @@ class ExtentThreshold(NIDMObject):
         self.extent = extent
         self.extent_rsl = extent_rsl
 
-        if label is None:
-            self.label = "Extent Threshold: " + thresh_desc
-        else:
-            self.label = label
-
+        self.label = f"Extent Threshold: {thresh_desc}" if label is None else label
         self.equiv_thresh = equiv_thresh
 
     @classmethod
-    def get_query(klass, oid=None):
-        if oid is None:
-            oid_var = "?oid"
-        else:
-            oid_var = "<" + str(oid) + ">"
-
-        query = """
+    def get_query(cls, oid=None):
+        oid_var = "?oid" if oid is None else f"<{str(oid)}>"
+        return (
+            """
 prefix nidm_ExtentThreshold: <http://purl.org/nidash/nidm#NIDM_0000026>
 prefix nidm_clusterSizeInVoxels: <http://purl.org/nidash/nidm#NIDM_0000084>
 prefix nidm_clusterSizeInResels: <http://purl.org/nidash/nidm#NIDM_0000156>
 
     SELECT DISTINCT * WHERE {
-    """ + oid_var + """ a nidm_ExtentThreshold: ;
+    """
+            + oid_var
+            + """ a nidm_ExtentThreshold: ;
         a ?threshold_type ;
         rdfs:label ?label  .
-    OPTIONAL {""" + oid_var + """ prov:value ?value .} .
-    OPTIONAL {""" + oid_var + """ nidm_clusterSizeInVoxels: ?extent .} .
-    OPTIONAL {""" + oid_var + """ nidm_clusterSizeInResels: ?extent_rsl .} .
+    OPTIONAL {"""
+            + oid_var
+            + """ prov:value ?value .} .
+    OPTIONAL {"""
+            + oid_var
+            + """ nidm_clusterSizeInVoxels: ?extent .} .
+    OPTIONAL {"""
+            + oid_var
+            + """ nidm_clusterSizeInResels: ?extent_rsl .} .
 
     FILTER ( ?threshold_type NOT IN (prov:Entity, nidm_ExtentThreshold:) )
 }
         """
-        return query
+        )
 
     def export(self, version, export_dir):
         """
@@ -545,13 +542,12 @@ class Cluster(NIDMObject):
         self.num = cluster_num
         if cog is not None:
             self.cog = cog
+        elif x and y and z:
+            self.cog = CenterOfGravity(
+                cluster_num, x=x, y=y, z=z, x_std=x_std, y_std=y_std,
+                z_std=z_std)
         else:
-            if x and y and z:
-                self.cog = CenterOfGravity(
-                    cluster_num, x=x, y=y, z=z, x_std=x_std, y_std=y_std,
-                    z_std=z_std)
-            else:
-                self.cog = None
+            self.cog = None
         self.peaks = peaks
         self.size = size
         self.pFWER = pFWER
@@ -568,13 +564,10 @@ class Cluster(NIDMObject):
         self.clust_size_resels = clust_size_resels
 
     @classmethod
-    def get_query(klass, oid=None):
-        if oid is None:
-            oid_var = "?oid"
-        else:
-            oid_var = "<" + str(oid) + ">"
-
-        query = """
+    def get_query(cls, oid=None):
+        oid_var = "?oid" if oid is None else f"<{str(oid)}>"
+        return (
+            """
 prefix nidm_SupraThresholdCluster: <http://purl.org/nidash/nidm#NIDM_0000070>
 prefix nidm_clusterSizeInVoxels: <http://purl.org/nidash/nidm#NIDM_0000084>
 prefix nidm_clusterLabelId: <http://purl.org/nidash/nidm#NIDM_0000082>
@@ -584,18 +577,28 @@ prefix nidm_pValueFWER: <http://purl.org/nidash/nidm#NIDM_0000115>
 prefix nidm_qValueFDR: <http://purl.org/nidash/nidm#NIDM_0000119>
 
 SELECT DISTINCT * WHERE {
-    """ + oid_var + """ a nidm_SupraThresholdCluster: ;
+    """
+            + oid_var
+            + """ a nidm_SupraThresholdCluster: ;
         rdfs:label ?label ;
         nidm_clusterSizeInVoxels: ?size ;
         nidm_clusterLabelId: ?cluster_num .
 
-    OPTIONAL {""" + oid_var + """ nidm_clusterSizeInResels: ?clust_size_resels .} .
-    OPTIONAL {""" + oid_var + """ nidm_pValueUncorrected: ?punc .} .
-    OPTIONAL {""" + oid_var + """ nidm_pValueFWER: ?pFWER .} .
-    OPTIONAL {""" + oid_var + """ nidm_qValueFDR: ?pFDR .} .
+    OPTIONAL {"""
+            + oid_var
+            + """ nidm_clusterSizeInResels: ?clust_size_resels .} .
+    OPTIONAL {"""
+            + oid_var
+            + """ nidm_pValueUncorrected: ?punc .} .
+    OPTIONAL {"""
+            + oid_var
+            + """ nidm_pValueFWER: ?pFWER .} .
+    OPTIONAL {"""
+            + oid_var
+            + """ nidm_qValueFDR: ?pFDR .} .
 }
         """
-        return query
+        )
 
     def export(self, nidm_version, export_dir):
         """
@@ -647,16 +650,13 @@ class DisplayMaskMap(NIDMObject):
                  derfrom_sha=None, isderfrommap=False):
         super(DisplayMaskMap, self).__init__(oid=oid)
         if not filename:
-            filename = 'DisplayMask' + str(mask_num) + '.nii.gz'
+            filename = f'DisplayMask{str(mask_num)}.nii.gz'
         self.file = NIDMFile(self.id, mask_file, filename,
                              sha=sha, fmt=fmt)
         self.coord_space = coord_space
         self.type = NIDM_DISPLAY_MASK_MAP
         self.prov_type = PROV['Entity']
-        if not label:
-            self.label = "Display Mask Map " + str(mask_num)
-        else:
-            self.label = label
+        self.label = f"Display Mask Map {str(mask_num)}" if not label else label
         if derfrom_id is not None:
             self.derfrom = DisplayMaskMap(
                 None, None, None,
@@ -669,24 +669,25 @@ class DisplayMaskMap(NIDMObject):
         self.isderfrommap = isderfrommap
 
     @classmethod
-    def get_query(klass, oid=None):
-        if oid is None:
-            oid_var = "?oid"
-        else:
-            oid_var = "<" + str(oid) + ">"
-
-        query = """
+    def get_query(cls, oid=None):
+        oid_var = "?oid" if oid is None else f"<{str(oid)}>"
+        return (
+            """
 prefix nidm_DisplayMaskMap: <http://purl.org/nidash/nidm#NIDM_0000020>
 
 SELECT DISTINCT * WHERE {
-    """ + oid_var + """ a nidm_DisplayMaskMap: ;
+    """
+            + oid_var
+            + """ a nidm_DisplayMaskMap: ;
         rdfs:label ?label ;
         nfo:fileName ?filename ;
         crypto:sha512 ?sha ;
         prov:atLocation ?mask_file ;
         dct:format ?fmt .
 
-    OPTIONAL {""" + oid_var + """ prov:wasDerivedFrom ?derfrom_id .
+    OPTIONAL {"""
+            + oid_var
+            + """ prov:wasDerivedFrom ?derfrom_id .
 
     ?derfrom_id a nidm_DisplayMaskMap: ;
         nfo:fileName ?derfrom_filename ;
@@ -696,7 +697,7 @@ SELECT DISTINCT * WHERE {
 
 }
         """
-        return query
+        )
 
     def export(self, nidm_version, export_dir):
         """
@@ -727,33 +728,31 @@ class PeakCriteria(NIDMObject):
         self.peak_dist = peak_dist
         self.type = NIDM_PEAK_DEFINITION_CRITERIA
         self.prov_type = PROV['Entity']
-        if not label:
-            self.label = "Peak Definition Criteria"
-        else:
-            self.label = label
+        self.label = "Peak Definition Criteria" if not label else label
 
     @classmethod
-    def get_query(klass, oid=None):
-        if oid is None:
-            oid_var = "?oid"
-        else:
-            oid_var = "<" + str(oid) + ">"
-
-        query = """
+    def get_query(cls, oid=None):
+        oid_var = "?oid" if oid is None else f"<{str(oid)}>"
+        return (
+            """
 prefix nidm_PeakDefinitionCriteria: <http://purl.org/nidash/nidm#NIDM_0000063>
 prefix nidm_minDistanceBetweenPeaks: <http://purl.org/nidash/nidm#NIDM_0000109>
 prefix nidm_maxNumberOfPeaksPerCluster: <http://purl.org/nidash/nidm#NIDM_0000\
 108>
 
     SELECT DISTINCT * WHERE {
-    """ + oid_var + """ a nidm_PeakDefinitionCriteria: ;
+    """
+            + oid_var
+            + """ a nidm_PeakDefinitionCriteria: ;
         rdfs:label ?label ;
         nidm_minDistanceBetweenPeaks: ?peak_dist .
 
-    OPTIONAL { """ + oid_var + """ nidm_maxNumberOfPeaksPerCluster: ?num_peak .} .
+    OPTIONAL { """
+            + oid_var
+            + """ nidm_maxNumberOfPeaksPerCluster: ?num_peak .} .
 }
         """
-        return query
+        )
 
     def export(self, nidm_version, export_dir):
         """
@@ -782,32 +781,31 @@ class ClusterCriteria(NIDMObject):
         self.connectivity = connectivity
         self.type = NIDM_CLUSTER_DEFINITION_CRITERIA
         self.prov_type = PROV['Entity']
-        if not label:
-            self.label = ("Cluster Connectivity Criterion: " +
-                          str(self.connectivity))
-        else:
-            self.label = label
+        self.label = (
+            f"Cluster Connectivity Criterion: {str(self.connectivity)}"
+            if not label
+            else label
+        )
 
     @classmethod
-    def get_query(klass, oid=None):
-        if oid is None:
-            oid_var = "?oid"
-        else:
-            oid_var = "<" + str(oid) + ">"
-
-        query = """
+    def get_query(cls, oid=None):
+        oid_var = "?oid" if oid is None else f"<{str(oid)}>"
+        return (
+            """
 prefix nidm_ClusterDefinitionCriteria: <http://purl.org/nidash/nidm#NIDM_00000\
 07>
 prefix nidm_hasConnectivityCriterion: <http://purl.org/nidash/nidm#NIDM_000009\
 9>
 
     SELECT DISTINCT * WHERE {
-    """ + oid_var + """ a nidm_ClusterDefinitionCriteria: ;
+    """
+            + oid_var
+            + """ a nidm_ClusterDefinitionCriteria: ;
         rdfs:label ?label ;
         nidm_hasConnectivityCriterion: ?connectivity .
 }
         """
-        return query
+        )
 
     def export(self, nidm_version, export_dir):
         """
@@ -857,24 +855,23 @@ class CenterOfGravity(NIDMObject):
         self.type = NIDM_CLUSTER_CENTER_OF_GRAVITY
         self.prov_type = PROV['Entity']
         if label is None:
-            label = "Center of gravity " + str(self.cluster_num)
+            label = f"Center of gravity {str(self.cluster_num)}"
         self.label = label
 
     @classmethod
-    def get_query(klass, oid=None):
-        if oid is None:
-            oid_var = "?oid"
-        else:
-            oid_var = "<" + str(oid) + ">"
-
-        query = """
+    def get_query(cls, oid=None):
+        oid_var = "?oid" if oid is None else f"<{str(oid)}>"
+        return (
+            """
 prefix nidm_ClusterCenterOfGravity: <http://purl.org/nidash/nidm#NIDM_0000140>
 prefix nidm_coordinateVector: <http://purl.org/nidash/nidm#NIDM_0000086>
 prefix nidm_coordinateVectorInVoxels: <http://purl.org/nidash/nidm#NIDM_000013\
 9>
 
     SELECT DISTINCT * WHERE {
-    """ + oid_var + """ a nidm_ClusterCenterOfGravity: ;
+    """
+            + oid_var
+            + """ a nidm_ClusterCenterOfGravity: ;
         rdfs:label ?label ;
         prov:atLocation ?coord_id .
 
@@ -884,7 +881,7 @@ prefix nidm_coordinateVectorInVoxels: <http://purl.org/nidash/nidm#NIDM_000013\
     OPTIONAL { ?coord_id nidm_coordinateVectorInVoxels: ?coord_vector .} .
 }
         """
-        return query
+        )
 
     def export(self, nidm_version, export_dir):
         """
@@ -914,7 +911,7 @@ class SearchSpace(NIDMObject):
                  label=None, oid=None, suffix=''):
         super(SearchSpace, self).__init__(oid=oid)
         if not filename:
-            filename = 'SearchSpaceMask' + suffix + '.nii.gz'
+            filename = f'SearchSpaceMask{suffix}.nii.gz'
         self.file = NIDMFile(self.id, search_space_file, filename,
                              sha=sha, fmt=fmt)
         self.coord_space = coord_space
@@ -938,13 +935,10 @@ class SearchSpace(NIDMObject):
         self.noise_roughness = noise_roughness
 
     @classmethod
-    def get_query(klass, oid=None):
-        if oid is None:
-            oid_var = "?oid"
-        else:
-            oid_var = "<" + str(oid) + ">"
-
-        query = """
+    def get_query(cls, oid=None):
+        oid_var = "?oid" if oid is None else f"<{str(oid)}>"
+        return (
+            """
 prefix nidm_SearchSpaceMaskMap: <http://purl.org/nidash/nidm#NIDM_0000068>
 prefix nidm_expectedNumberOfVoxelsPerCluster: <http://purl.org/nidash/nidm#NID\
 M_0000143>
@@ -970,7 +964,9 @@ prefix nidm_noiseRoughnessInVoxels: <http://purl.org/nidash/nidm#NIDM_0000145>
 
 SELECT DISTINCT * WHERE {
 
-""" + oid_var + """ a nidm_SearchSpaceMaskMap: ;
+"""
+            + oid_var
+            + """ a nidm_SearchSpaceMaskMap: ;
     rdfs:label ?label ;
     nidm_searchVolumeInVoxels: ?vol_in_voxels ;
     nidm_searchVolumeInUnits: ?vol_in_units ;
@@ -985,19 +981,35 @@ SELECT DISTINCT * WHERE {
     nfo:fileName ?filename ;
     crypto:sha512 ?sha .
 
-    OPTIONAL {""" + oid_var + """ nidm_expectedNumberOfVoxelsPerCluster: ?expected_num_voxels } .
-    OPTIONAL {""" + oid_var + """ nidm_expectedNumberOfClusters: ?expected_num_clusters } .
-    OPTIONAL {""" + oid_var + """ nidm_heightCriticalThresholdFWE05: ?height_critical_fwe05 } .
-    OPTIONAL {""" + oid_var + """ nidm_heightCriticalThresholdFDR05: ?height_critical_fdr05 } .
-    OPTIONAL {""" + oid_var + """ spm_smallestSignificantClusterSizeInVoxelsFWE05: ?extent_critical_fwe05 } .
-    OPTIONAL {""" + oid_var + """ spm_smallestSignificantClusterSizeInVoxelsFDR05: ?extent_critical_fdr05 } .
-    OPTIONAL {""" + oid_var + """ spm_searchVolumeReselsGeometry: ?search_vol_geom } .
-    OPTIONAL {""" + oid_var + """ nidm_noiseRoughnessInVoxels: ?noise_roughness } .
+    OPTIONAL {"""
+            + oid_var
+            + """ nidm_expectedNumberOfVoxelsPerCluster: ?expected_num_voxels } .
+    OPTIONAL {"""
+            + oid_var
+            + """ nidm_expectedNumberOfClusters: ?expected_num_clusters } .
+    OPTIONAL {"""
+            + oid_var
+            + """ nidm_heightCriticalThresholdFWE05: ?height_critical_fwe05 } .
+    OPTIONAL {"""
+            + oid_var
+            + """ nidm_heightCriticalThresholdFDR05: ?height_critical_fdr05 } .
+    OPTIONAL {"""
+            + oid_var
+            + """ spm_smallestSignificantClusterSizeInVoxelsFWE05: ?extent_critical_fwe05 } .
+    OPTIONAL {"""
+            + oid_var
+            + """ spm_smallestSignificantClusterSizeInVoxelsFDR05: ?extent_critical_fdr05 } .
+    OPTIONAL {"""
+            + oid_var
+            + """ spm_searchVolumeReselsGeometry: ?search_vol_geom } .
+    OPTIONAL {"""
+            + oid_var
+            + """ nidm_noiseRoughnessInVoxels: ?noise_roughness } .
 
 }
 
         """
-        return query
+        )
 
     # Generate prov for search space entity generated by the inference activity
     def export(self, version, export_dir):
@@ -1014,11 +1026,10 @@ SELECT DISTINCT * WHERE {
             (NIDM_SEARCH_VOLUME_IN_RESELS, self.search_volume_in_resels),
             (NIDM_RESEL_SIZE_IN_VOXELS, self.resel_size_in_voxels))
 
-        # Noise FWHM was introduced in NIDM-Results 1.1.0
-        if self.noise_fwhm_in_voxels is not None:
-            if (version['major'] > 1) or \
-               (version['major'] >= 1 and
+        if (version['major'] > 1) or \
+                   (version['major'] >= 1 and
                     (version['minor'] > 0 or version['revision'] > 0)):
+            if self.noise_fwhm_in_voxels is not None:
                 atts = atts + (
                     (NIDM_NOISE_FWHM_IN_VOXELS, self.noise_fwhm_in_voxels),
                     (NIDM_NOISE_FWHM_IN_UNITS, self.noise_fwhm_in_units))
@@ -1076,22 +1087,19 @@ class Coordinate(NIDMObject):
         if x is not None and y is not None and z is not None:
             self.coord_vector = [x, y, z]
         else:
-            if coord_vector and not type(coord_vector) is list:
+            if coord_vector and type(coord_vector) is not list:
                 coord_vector = json.loads(coord_vector)
             self.coord_vector = coord_vector
         if x_std is not None and y_std is not None and z_std is not None:
             self.coord_vector_std = [x_std, y_std, z_std]
         else:
-            if coord_vector_std and not type(coord_vector_std) is list:
+            if coord_vector_std and type(coord_vector_std) is not list:
                 coord_vector_std = json.loads(coord_vector_std)
             self.coord_vector_std = coord_vector_std
 
         self.type = NIDM_COORDINATE
         self.prov_type = PROV['Entity']
-        if label is not None:
-            self.label = label
-        else:
-            self.label = "Coordinate " + self.label_id
+        self.label = label if label is not None else f"Coordinate {self.label_id}"
 
     def __str__(self):
         return '%s\t%s' % (self.label, self.coord_vector)
@@ -1142,7 +1150,7 @@ class Peak(NIDMObject):
             # cluster_index, peak_index = peak_unique_id.split("_")
         else:
             peak_unique_id = suffix
-            self.label = "Peak " + peak_unique_id
+            self.label = f"Peak {peak_unique_id}"
         self.equiv_z = equiv_z
         self.p_unc = p_unc
         self.p_fwer = p_fwer
@@ -1156,13 +1164,10 @@ class Peak(NIDMObject):
         self.p_fdr = p_fdr
 
     @classmethod
-    def get_query(klass, oid=None):
-        if oid is None:
-            oid_var = "?oid"
-        else:
-            oid_var = "<" + str(oid) + ">"
-
-        query = """
+    def get_query(cls, oid=None):
+        oid_var = "?oid" if oid is None else f"<{str(oid)}>"
+        return (
+            """
 prefix nidm_Peak: <http://purl.org/nidash/nidm#NIDM_0000062>
 prefix nidm_pValueUncorrected: <http://purl.org/nidash/nidm#NIDM_0000116>
 prefix nidm_equivalentZStatistic: <http://purl.org/nidash/nidm#NIDM_0000092>
@@ -1173,7 +1178,9 @@ prefix nidm_coordinateVectorInVoxels: <http://purl.org/nidash/nidm#NIDM_000013\
 prefix nidm_coordinateVector: <http://purl.org/nidash/nidm#NIDM_0000086>
 
 SELECT DISTINCT * WHERE {
-    """ + oid_var + """ a nidm_Peak: ;
+    """
+            + oid_var
+            + """ a nidm_Peak: ;
         rdfs:label ?label ;
         prov:atLocation ?coord_id .
 
@@ -1183,14 +1190,24 @@ SELECT DISTINCT * WHERE {
 
     OPTIONAL {?coord_id nidm_coordinateVectorInVoxels: ?coord_vector .} .
 
-    OPTIONAL {""" + oid_var + """ prov:value ?value .} .
-    OPTIONAL {""" + oid_var + """ nidm_pValueUncorrected: ?p_unc .} .
-    OPTIONAL {""" + oid_var + """ nidm_equivalentZStatistic: ?equiv_z .} .
-    OPTIONAL {""" + oid_var + """ nidm_pValueFWER: ?p_fwer .} .
-    OPTIONAL {""" + oid_var + """ nidm_qValueFDR: ?p_fdr .} .
+    OPTIONAL {"""
+            + oid_var
+            + """ prov:value ?value .} .
+    OPTIONAL {"""
+            + oid_var
+            + """ nidm_pValueUncorrected: ?p_unc .} .
+    OPTIONAL {"""
+            + oid_var
+            + """ nidm_equivalentZStatistic: ?equiv_z .} .
+    OPTIONAL {"""
+            + oid_var
+            + """ nidm_pValueFWER: ?p_fwer .} .
+    OPTIONAL {"""
+            + oid_var
+            + """ nidm_qValueFDR: ?p_fdr .} .
         }
         """
-        return query
+        )
 
     def __str__(self):
         return '%s \tz=%.2f \tp=%.2e (unc.) \t%s' % (

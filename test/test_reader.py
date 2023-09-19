@@ -56,15 +56,15 @@ class TestReader(unittest.TestCase, TestResultDataModel):
 
         # Download the NIDM-Results packs from NeuroVault if not available
         # locally
-        self.packs = list()
+        self.packs = []
         for nidm_res in data["results"]:
             url = nidm_res["zip_file"]
             study = nidm_res["name"]
 
-            nidmpack = os.path.join(data_dir, study + ".zip")
+            nidmpack = os.path.join(data_dir, f"{study}.zip")
             if not os.path.isfile(nidmpack):
                 f = urlopen(url)
-                print("downloading " + url + " at " + nidmpack)
+                print(f"downloading {url} at {nidmpack}")
                 with open(nidmpack, "wb") as local_file:
                     local_file.write(f.read())
             self.packs.append(nidmpack)
@@ -98,7 +98,7 @@ class TestReader(unittest.TestCase, TestResultDataModel):
             # Rewrite the NIDM pack
             new_name = os.path.join(self.out_dir, os.path.basename(nidmpack))
             nidmres.serialize(new_name)
-            print('Serialised to ' + new_name)
+            print(f'Serialised to {new_name}')
             print("----")
 
             # Read the rewritten pack

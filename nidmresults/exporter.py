@@ -41,16 +41,16 @@ class NIDMExporter():
         # Create output path from output name
         self.zipped = zipped
         if not self.zipped:
-            out_dirname = out_dirname+".nidm"
+            out_dirname = f"{out_dirname}.nidm"
         else:
-            out_dirname = out_dirname+".nidm.zip"
+            out_dirname = f"{out_dirname}.nidm.zip"
         out_dir = os.path.join(out_path, out_dirname)
 
         # Quit if output path already exists and user doesn't want to overwrite
         # it
         if os.path.exists(out_dir):
-            msg = out_dir+" already exists, overwrite?"
-            if not input("%s (y/N) " % msg).lower() == 'y':
+            msg = f"{out_dir} already exists, overwrite?"
+            if input(f"{msg} (y/N) ").lower() != 'y':
                 quit("Bye.")
             if os.path.isdir(out_dir):
                 shutil.rmtree(out_dir)
@@ -126,11 +126,7 @@ class NIDMExporter():
         """
         Add a NIDMObject to a NIDM-Results export.
         """
-        if not export_file:
-            export_dir = None
-        else:
-            export_dir = self.export_dir
-
+        export_dir = None if not export_file else self.export_dir
         if not isinstance(nidm_object, NIDMFile):
             nidm_object.export(self.version, export_dir)
         else:
@@ -181,7 +177,7 @@ class NIDMExporter():
                     self.add_object(model_fitting.design_matrix.drift_model)
 
                 if self.version['major'] > 1 or \
-                        (self.version['major'] == 1 and
+                            (self.version['major'] == 1 and
                          self.version['minor'] >= 3):
                     # Machine
                     # model_fitting.data.wasAttributedTo(model_fitting.machine)
@@ -293,7 +289,7 @@ class NIDMExporter():
                 # self.add_object(model_fitting)
 
             # Add contrast estimation steps
-            analysis_masks = dict()
+            analysis_masks = {}
             for (model_fitting_id, pe_ids), contrasts in list(
                     self.contrasts.items()):
                 for contrast in contrasts:
@@ -306,7 +302,7 @@ class NIDMExporter():
                     self.bundle.used(contrast.estimation.id,
                                      model_fitting.mask_map.id)
                     analysis_masks[contrast.estimation.id] = \
-                        model_fitting.mask_map.id
+                            model_fitting.mask_map.id
                     self.bundle.used(contrast.estimation.id,
                                      contrast.weights.id)
                     self.bundle.used(contrast.estimation.id,
@@ -357,7 +353,7 @@ class NIDMExporter():
                         stderr_explmeansq_map.coord_space)
                     if isinstance(stderr_explmeansq_map,
                                   ContrastStdErrMap) and \
-                            stderr_explmeansq_map.contrast_var:
+                                stderr_explmeansq_map.contrast_var:
                         self.add_object(
                             stderr_explmeansq_map.contrast_var)
                         if stderr_explmeansq_map.var_coord_space:
@@ -542,8 +538,7 @@ class NIDMExporter():
             if model_fitting.activity.id == mf_id:
                 return model_fitting
 
-        raise Exception("Model fitting activity with id: " + str(mf_id) +
-                        " not found.")
+        raise Exception(f"Model fitting activity with id: {str(mf_id)} not found.")
 
     def _get_contrast(self, con_id):
         """
@@ -554,8 +549,7 @@ class NIDMExporter():
             for contrast in contrasts:
                 if contrast.estimation.id == con_id:
                     return contrast
-        raise Exception("Contrast activity with id: " + str(con_id) +
-                        " not found.")
+        raise Exception(f"Contrast activity with id: {str(con_id)} not found.")
 
     def _add_namespaces(self):
         """
@@ -628,34 +622,29 @@ class NIDMExporter():
         of type ModelParametersEstimation.
         """
         if error_model.dependance == NIDM_INDEPEDENT_ERROR:
-            if error_model.variance_homo:
-                estimation_method = STATO_OLS
-            else:
-                estimation_method = STATO_WLS
+            estimation_method = STATO_OLS if error_model.variance_homo else STATO_WLS
         else:
             estimation_method = STATO_GLS
 
-        mpe = ModelParametersEstimation(estimation_method, self.software.id)
-
-        return mpe
+        return ModelParametersEstimation(estimation_method, self.software.id)
 
     def use_prefixes(self, ttl):
         prefix_file = os.path.join(os.path.dirname(__file__), 'prefixes.csv')
-        context = dict()
+        context = {}
         with open(prefix_file, encoding="ascii") as csvfile:
             reader = csv.reader(csvfile)
             next(reader, None)  # skip the headers
             for alphanum_id, prefix, uri in reader:
                 if alphanum_id in ttl:
                     context[prefix] = uri
-                    ttl = "@prefix " + prefix + ": <" + uri + "> .\n" + ttl
-                    ttl = ttl.replace(alphanum_id, prefix + ":")
+                    ttl = f"@prefix {prefix}: <{uri}" + "> .\n" + ttl
+                    ttl = ttl.replace(alphanum_id, f"{prefix}:")
                     if uri in ttl:
-                        ttl = ttl.replace(alphanum_id, prefix + ":")
+                        ttl = ttl.replace(alphanum_id, f"{prefix}:")
                 elif uri in ttl:
                     context[prefix] = uri
-                    ttl = "@prefix " + prefix + ": <" + uri + "> .\n" + ttl
-                    ttl = ttl.replace(alphanum_id, prefix + ":")
+                    ttl = f"@prefix {prefix}: <{uri}" + "> .\n" + ttl
+                    ttl = ttl.replace(alphanum_id, f"{prefix}:")
         return (ttl, context)
 
     def save_prov_to_files(self, showattributes=False):

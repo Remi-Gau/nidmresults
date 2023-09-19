@@ -46,9 +46,7 @@ from nidmresults.objects.constants import *
 #     return sub_types
 
 def get_property_names_in_owl(my_owl_graph):
-    properties = set();
-    for class_name in my_owl_graph.subjects(RDF['type'], OWL['DatatypeProperty']):
-        properties.add(class_name)
+    properties = set(my_owl_graph.subjects(RDF['type'], OWL['DatatypeProperty']))
     for class_name in my_owl_graph.subjects(RDF['type'], OWL['ObjectProperty']):
         properties.add(class_name)
     return properties

@@ -50,7 +50,7 @@ class ContrastWeights(NIDMObject):
                  stat_type, label=None, oid=None):
         super(ContrastWeights, self).__init__(oid=oid)
         self.contrast_name = contrast_name
-        if not type(contrast_weights) is list:
+        if type(contrast_weights) is not list:
             contrast_weights = json.loads(contrast_weights)
         self.contrast_weights = contrast_weights
         self.contrast_num = contrast_num
@@ -58,31 +58,30 @@ class ContrastWeights(NIDMObject):
         self.type = STATO_CONTRAST_WEIGHT_MATRIX
         self.prov_type = PROV['Entity']
         if label is None:
-            self.label = "Contrast Weights: " + self.contrast_name
+            self.label = f"Contrast Weights: {self.contrast_name}"
         else:
             self.label = label
 
     @classmethod
-    def get_query(klass, oid=None):
-        if oid is None:
-            oid_var = "?oid"
-        else:
-            oid_var = "<" + str(oid) + ">"
-
-        query = """
+    def get_query(cls, oid=None):
+        oid_var = "?oid" if oid is None else f"<{str(oid)}>"
+        return (
+            """
 prefix obo_contrastweightmatrix: <http://purl.obolibrary.org/obo/STATO_0000323>
 prefix nidm_statisticType: <http://purl.org/nidash/nidm#NIDM_0000123>
 prefix nidm_contrastName: <http://purl.org/nidash/nidm#NIDM_0000085>
 
 SELECT DISTINCT * WHERE {
-    """ + oid_var + """ a obo_contrastweightmatrix: ;
+    """
+            + oid_var
+            + """ a obo_contrastweightmatrix: ;
     rdfs:label ?label ;
     prov:value ?contrast_weights ;
     nidm_statisticType: ?stat_type ;
     nidm_contrastName: ?contrast_name .
 }
         """
-        return query
+        )
 
     def export(self, nidm_version, export_dir):
         """
@@ -124,17 +123,14 @@ class ContrastMap(NIDMObject):
         self.num = contrast_num
         self.name = contrast_name
         if filename is None:
-            filename = 'Contrast' + self.num + '.nii.gz'
+            filename = f'Contrast{self.num}.nii.gz'
         self.file = NIDMFile(self.id, contrast_file, filename, sha=sha,
                              fmt=fmt)
         self.coord_space = coord_space
         self.type = NIDM_CONTRAST_MAP
         self.prov_type = PROV['Entity']
         if label is None:
-            if self.name:
-                self.label = "Contrast Map: " + self.name
-            else:
-                self.label = None
+            self.label = f"Contrast Map: {self.name}" if self.name else None
         else:
             self.label = label
 
@@ -149,17 +145,16 @@ class ContrastMap(NIDMObject):
         self.isderfrommap = isderfrommap
 
     @classmethod
-    def get_query(klass, oid=None):
-        if oid is None:
-            oid_var = "?oid"
-        else:
-            oid_var = "<" + str(oid) + ">"
-
-        query = """
+    def get_query(cls, oid=None):
+        oid_var = "?oid" if oid is None else f"<{str(oid)}>"
+        return (
+            """
         prefix nidm_ContrastMap: <http://purl.org/nidash/nidm#NIDM_0000002>
 
         SELECT DISTINCT * WHERE {
-            """ + oid_var + """ a nidm_ContrastMap: ;
+            """
+            + oid_var
+            + """ a nidm_ContrastMap: ;
             rdfs:label ?label ;
             prov:atLocation ?contrast_file ;
             dct:format ?fmt ;
@@ -167,7 +162,9 @@ class ContrastMap(NIDMObject):
             nidm_contrastName: ?contrast_name ;
             crypto:sha512 ?sha .
 
-            OPTIONAL {""" + oid_var + """ prov:wasDerivedFrom ?derfrom_id .
+            OPTIONAL {"""
+            + oid_var
+            + """ prov:wasDerivedFrom ?derfrom_id .
 
             ?derfrom_id a nidm_ContrastMap: ;
                 nfo:fileName ?derfrom_filename ;
@@ -176,7 +173,7 @@ class ContrastMap(NIDMObject):
              } .
         }
         """
-        return query
+        )
 
     def export(self, nidm_version, export_dir):
         """
@@ -225,18 +222,17 @@ class ContrastExplainedMeanSquareMap(NIDMObject):
         self.label = label
 
     @classmethod
-    def get_query(klass, oid=None):
-        if oid is None:
-            oid_var = "?oid"
-        else:
-            oid_var = "<" + str(oid) + ">"
-
-        query = """
+    def get_query(cls, oid=None):
+        oid_var = "?oid" if oid is None else f"<{str(oid)}>"
+        return (
+            """
 prefix nidm_ContrastExplainedMeanSquareMap: <http://purl.org/nidash/nidm#NIDM_\
 0000163>
 
 SELECT DISTINCT * WHERE {
-    """ + oid_var + """ a nidm_ContrastExplainedMeanSquareMap: ;
+    """
+            + oid_var
+            + """ a nidm_ContrastExplainedMeanSquareMap: ;
     rdfs:label ?label ;
     prov:atLocation ?expl_mean_sq_file ;
     dct:format ?fmt ;
@@ -244,7 +240,7 @@ SELECT DISTINCT * WHERE {
     crypto:sha512 ?sha .
 }
         """
-        return query
+        )
 
     def export(self, nidm_version, export_dir):
         """
@@ -308,7 +304,7 @@ class ContrastStdErrMap(NIDMObject):
         self.sha = sha
         self.filename = filename
 
-        std_filename = "ContrastStandardError" + self.num + ".nii.gz"
+        std_filename = f"ContrastStandardError{self.num}.nii.gz"
         if self.is_variance:
             # Copy contrast variance map in export directory
             path, var_cope_filename = os.path.split(self.file)
@@ -344,26 +340,27 @@ class ContrastStdErrMap(NIDMObject):
                 self.contrast_var = None
 
     @classmethod
-    def get_query(klass, oid=None):
-        if oid is None:
-            oid_var = "?oid"
-        else:
-            oid_var = "<" + str(oid) + ">"
-
-        query = """
+    def get_query(cls, oid=None):
+        oid_var = "?oid" if oid is None else f"<{str(oid)}>"
+        return (
+            """
 prefix nidm_ContrastStandardErrorMap: <http://purl.org/nidash/nidm#NIDM_000001\
 3>
 prefix nidm_ContrastVarianceMap: <http://purl.org/nidash/nidm#NIDM_0000135>
 
 SELECT DISTINCT * WHERE {
-    """ + oid_var + """ a nidm_ContrastStandardErrorMap: ;
+    """
+            + oid_var
+            + """ a nidm_ContrastStandardErrorMap: ;
     rdfs:label ?label ;
     prov:atLocation ?filepath ;
     nfo:fileName ?filename ;
     dct:format ?fmt ;
     crypto:sha512 ?sha .
 
-    OPTIONAL {""" + oid_var + """ prov:wasDerivedFrom ?derfrom_id .
+    OPTIONAL {"""
+            + oid_var
+            + """ prov:wasDerivedFrom ?derfrom_id .
 
     ?derfrom_id a nidm_ContrastVarianceMap: ;
         nfo:fileName ?derfrom_filename ;
@@ -372,7 +369,7 @@ SELECT DISTINCT * WHERE {
      } .
 }
         """
-        return query
+        )
 
     def export(self, nidm_version, export_dir):
         """
@@ -418,9 +415,8 @@ class StatisticMap(NIDMObject):
         super(StatisticMap, self).__init__(oid=oid)
         self.num = contrast_num
         self.contrast_name = contrast_name
-        self.stat_type = stat_type
-
         self.stat = None
+        self.stat_type = stat_type
         if isinstance(self.stat_type, QualifiedName):
             self.stat = self.stat_type
         elif self.stat_type is not None:
@@ -433,8 +429,7 @@ class StatisticMap(NIDMObject):
             elif self.stat_type.startswith('http'):
                 self.stat = Identifier(self.stat_type)
             else:
-                raise Exception(
-                    'Unrecognised statistic: ' + str(self.stat_type))
+                raise Exception(f'Unrecognised statistic: {str(self.stat_type)}')
 
         if derfrom_id is not None:
             self.derfrom = StatisticMap(
@@ -448,8 +443,7 @@ class StatisticMap(NIDMObject):
 
         # FIXME use new 'preferred mathematical notation from stato'
         if self.num is not None:
-            filename = self.stat_type.upper() + \
-                'Statistic' + self.num + '.nii.gz'
+            filename = f'{self.stat_type.upper()}Statistic{self.num}.nii.gz'
         self.file = NIDMFile(self.id, location, filename, sha=sha)
         self.coord_space = coord_space
 
@@ -459,11 +453,10 @@ class StatisticMap(NIDMObject):
         self.label = label
         if label is not None:
             self.label = label
-        else:
-            if self.contrast_name:
-                self.label = "Statistic Map: " + self.contrast_name
+        elif self.contrast_name:
+            self.label = f"Statistic Map: {self.contrast_name}"
                 # Include statistic type in the label
-                self.label = self.stat_type + '-' + self.label
+            self.label = f'{self.stat_type}-{self.label}'
 
         self.fmt = fmt
 
@@ -483,13 +476,10 @@ class StatisticMap(NIDMObject):
         return '%s\t%s' % (self.label, self.file)
 
     @classmethod
-    def get_query(klass, oid=None):
-        if oid is None:
-            oid_var = "?oid"
-        else:
-            oid_var = "<" + str(oid) + ">"
-
-        query = """
+    def get_query(cls, oid=None):
+        oid_var = "?oid" if oid is None else f"<{str(oid)}>"
+        return (
+            """
 prefix nidm_StatisticMap: <http://purl.org/nidash/nidm#NIDM_0000076>
 
 prefix nidm_statisticType: <http://purl.org/nidash/nidm#NIDM_0000123>
@@ -498,7 +488,9 @@ prefix nidm_effectDegreesOfFreedom: <http://purl.org/nidash/nidm#NIDM_0000091>
 prefix nidm_errorDegreesOfFreedom: <http://purl.org/nidash/nidm#NIDM_0000093>
 
 SELECT DISTINCT * WHERE {
-    """ + oid_var + """ a nidm_StatisticMap: ;
+    """
+            + oid_var
+            + """ a nidm_StatisticMap: ;
     rdfs:label ?label ;
     prov:atLocation ?location ;
     dct:format ?fmt ;
@@ -509,7 +501,9 @@ SELECT DISTINCT * WHERE {
     nidm_effectDegreesOfFreedom: ?effdof ;
     nidm_errorDegreesOfFreedom: ?dof .
 
-    OPTIONAL {""" + oid_var + """ prov:wasDerivedFrom ?derfrom_id .
+    OPTIONAL {"""
+            + oid_var
+            + """ prov:wasDerivedFrom ?derfrom_id .
 
     ?derfrom_id a nidm_StatisticMap: ;
         nfo:fileName ?derfrom_filename ;
@@ -518,7 +512,7 @@ SELECT DISTINCT * WHERE {
      } .
 }
         """
-        return query
+        )
 
     def export(self, nidm_version, export_dir):
         """
@@ -532,14 +526,12 @@ SELECT DISTINCT * WHERE {
                 NIDM_IN_COORDINATE_SPACE,  self.coord_space.id))
             attributes.insert(0, (PROV['label'], self.label))
 
-        if not self.stat_type == 'Z':
+        if self.stat_type != 'Z':
             attributes.insert(0, (NIDM_ERROR_DEGREES_OF_FREEDOM, self.dof))
-            attributes.insert(0, (NIDM_EFFECT_DEGREES_OF_FREEDOM, self.effdof))
         else:
             # For Z-Statistic error dof is infinity and effect dof is 1
             attributes.insert(0, (NIDM_ERROR_DEGREES_OF_FREEDOM, float("inf")))
-            attributes.insert(0, (NIDM_EFFECT_DEGREES_OF_FREEDOM, self.effdof))
-
+        attributes.insert(0, (NIDM_EFFECT_DEGREES_OF_FREEDOM, self.effdof))
         if self.stat is not None:
             attributes.insert(0, (NIDM_STATISTIC_TYPE, self.stat))
 
@@ -566,29 +558,28 @@ class ContrastEstimation(NIDMObject):
         if label is not None:
             self.label = label
         else:
-            self.label = "Contrast estimation: " + contrast_name
+            self.label = f"Contrast estimation: {contrast_name}"
         # Only used when reading (so far)
         self.param_estimate_id = param_estimate_id
 
     @classmethod
-    def get_query(klass, oid=None):
-        if oid is None:
-            oid_var = "?oid"
-        else:
-            oid_var = "<" + str(oid) + ">"
-
-        query = """
+    def get_query(cls, oid=None):
+        oid_var = "?oid" if oid is None else f"<{str(oid)}>"
+        return (
+            """
 prefix nidm_ContrastEstimation: <http://purl.org/nidash/nidm#NIDM_0000001>
 prefix nidm_ParameterEstimateMap: <http://purl.org/nidash/nidm#NIDM_0000061>
 
 SELECT DISTINCT * WHERE {
-    """ + oid_var + """ a nidm_ContrastEstimation: ;
+    """
+            + oid_var
+            + """ a nidm_ContrastEstimation: ;
         rdfs:label ?label ;
         prov:used ?param_estimate_id .
     ?param_estimate_id a nidm_ParameterEstimateMap: .
 }
         """
-        return query
+        )
 
     def export(self, nidm_version, export_dir):
         """

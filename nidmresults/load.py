@@ -18,13 +18,13 @@ def load(filename, to_replace=dict()):
        NIDM-Results object
     '''
     if not os.path.exists(filename):
-        raise IOException('File does not exist: %s' % filename)
+        raise IOException(f'File does not exist: {filename}')
 
     if filename.endswith('.json'):
         raise Exception('Minimal json file: not handled yet')
     elif filename.endswith('.nidm.zip'):
         nidm = NIDMResults.load_from_pack(filename, to_replace=to_replace)
     else:
-        raise Exception('Unhandled format ' + filename)
+        raise Exception(f'Unhandled format {filename}')
 
     return nidm

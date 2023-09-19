@@ -83,7 +83,7 @@ SELECT DISTINCT ?type ?version ?exp_act WHERE {
         """
 
         sd = g.query(query)
-        objects = dict()
+        objects = {}
         if sd:
             for row in sd:
                 argums = row.asdict()
@@ -118,10 +118,10 @@ SELECT DISTINCT ?type ?version ?exp_act WHERE {
         return rdf_data
 
     @classmethod
-    def load_from_pack(klass, nidm_zip, workaround=False, to_replace=dict()):
-        nidmr = NIDMResults(nidm_zip=nidm_zip, workaround=workaround,
-                            to_replace=to_replace)
-        return nidmr
+    def load_from_pack(cls, nidm_zip, workaround=False, to_replace=dict()):
+        return NIDMResults(
+            nidm_zip=nidm_zip, workaround=workaround, to_replace=to_replace
+        )
 
     def get_info(self):
         if self.info is None:

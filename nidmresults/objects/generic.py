@@ -33,7 +33,7 @@ class NIDMObject(object):
         if oid is None:
             self.id = NIIRI[str(uuid.uuid4())]
         else:
-            if not type(oid) is QualifiedName:
+            if type(oid) is not QualifiedName:
                 oid = NIIRI.qname(Identifier(oid))
             self.id = oid
 
@@ -57,19 +57,18 @@ class NIDMObject(object):
         pass
 
     def __str__(self):
-        value = ""
-        if hasattr(self, 'value'):
-            value = ": " + self.value
+        value = f": {self.value}" if hasattr(self, 'value') else ""
         location = ""
         if hasattr(self, 'file'):
             if hasattr(self.file, 'path'):
-                location = " - " + self.file.path
-        return '"' + self.label + '"' + value + location
+                location = f" - {self.file.path}"
+        return f'"{self.label}"{value}{location}'
 
     def __repr__(self):
-        return '<"' + self.label + '" ' + \
-               str(self.id).replace("niiri:", "").replace(NIIRI._uri, "")[0:8]\
-               + '>'
+        return (
+            f'<"{self.label}" '
+            + str(self.id).replace("niiri:", "").replace(NIIRI._uri, "")[:8]
+        ) + '>'
 
     def add_attributes(self, attributes):
         if hasattr(self, 'attributes'):
@@ -97,30 +96,26 @@ class NIDMResultsBundle(NIDMObject):
         super(NIDMResultsBundle, self).__init__(oid=oid)
         self.type = NIDM_RESULTS
         self.nidm_version = nidm_version
-        if label is None:
-            self.label = "NIDM-Results"
-        else:
-            self.label = label
+        self.label = "NIDM-Results" if label is None else label
         self.prov_type = PROV['Bundle']
 
     @classmethod
-    def get_query(klass, oid=None):
-        if oid is None:
-            oid_var = "?oid"
-        else:
-            oid_var = "<" + str(oid) + ">"
-
-        query = """
+    def get_query(cls, oid=None):
+        oid_var = "?oid" if oid is None else f"<{str(oid)}>"
+        return (
+            """
 prefix dctype: <http://purl.org/dc/dcmitype/>
 
 SELECT * WHERE
 {
-    """ + oid_var + """ a nidm_NIDMResults: ;
+    """
+            + oid_var
+            + """ a nidm_NIDMResults: ;
     rdfs:label ?label ;
     nidm_version: ?nidm_version .
 }
         """
-        return query
+        )
 
     def export(self, nidm_version, export_dir):
         """
@@ -144,7 +139,7 @@ class CoordinateSpace(NIDMObject):
                  vox_size=None, dimensions=None, numdim=None, units=None,
                  oid=None, label="Coordinate space"):
         super(CoordinateSpace, self).__init__(oid)
-        
+
         if not isinstance(coordinate_system, QualifiedName):
             coordinate_system = NIDM.qname(coordinate_system)
 
@@ -154,9 +149,9 @@ class CoordinateSpace(NIDMObject):
         self.label = label
 
         if (vox_to_world is None) and (vox_size is None) and\
-                (dimensions is None) and (numdim is None) and\
-                (units is None) and \
-                (nifti_file is not None):
+                    (dimensions is None) and (numdim is None) and\
+                    (units is None) and \
+                    (nifti_file is not None):
             thresImg = nib.load(nifti_file)
             thresImgHdr = thresImg.get_header()
 
@@ -171,7 +166,7 @@ class CoordinateSpace(NIDMObject):
             units = ["mm", "mm", "mm"]
 
         self.number_of_dimensions = numdim
-        if not type(vox_to_world) is np.ndarray:
+        if type(vox_to_world) is not np.ndarray:
             # This is useful if info was read from a NIDM pack
             vox_to_world = np.array(json.loads(vox_to_world))
             dimensions = np.array(json.loads(dimensions))
@@ -199,26 +194,16 @@ class CoordinateSpace(NIDMObject):
             NIDM_IXI549_COORDINATE_SYSTEM.uri,
             NIDM_MNI305_COORDINATE_SYSTEM.uri]
 
-        if str(self.coordinate_system) in mni_coords:
-            return True
-        else:
-            return False
+        return str(self.coordinate_system) in mni_coords
 
     def is_talairach(self):
-        if str(self.coordinate_system) in \
-                [NIDM_TALAIRACH_COORDINATE_SYSTEM.uri]:
-            return True
-        else:
-            return False
+        return str(self.coordinate_system) in [NIDM_TALAIRACH_COORDINATE_SYSTEM.uri]
 
     @classmethod
-    def get_query(klass, oid=None):
-        if oid is None:
-            oid_var = "?oid"
-        else:
-            oid_var = "<" + str(oid) + ">"
-
-        query = """
+    def get_query(cls, oid=None):
+        oid_var = "?oid" if oid is None else f"<{str(oid)}>"
+        return (
+            """
 prefix nidm_CoordinateSpace: <http://purl.org/nidash/nidm#NIDM_0000016>
 prefix nidm_voxelToWorldMapping: <http://purl.org/nidash/nidm#NIDM_0000132>
 prefix nidm_voxelUnits: <http://purl.org/nidash/nidm#NIDM_0000133>
@@ -233,7 +218,9 @@ SELECT ?oid ?label ?vox_to_world ?units ?vox_size ?coordinate_system ?numdim
 ?dimensions
         WHERE
         {
-    """ + oid_var + """ a nidm_CoordinateSpace: ;
+    """
+            + oid_var
+            + """ a nidm_CoordinateSpace: ;
     rdfs:label ?label ;
     nidm_voxelToWorldMapping: ?vox_to_world ;
     nidm_voxelUnits: ?units ;
@@ -243,7 +230,7 @@ SELECT ?oid ?label ?vox_to_world ?units ?vox_size ?coordinate_system ?numdim
     nidm_dimensionsInVoxels: ?dimensions .
     }
         """
-        return query
+        )
 
     def export(self, nidm_version, export_dir):
         """
@@ -286,15 +273,11 @@ class NIDMFile(NIDMObject):
         self.temporary = temporary
 
     def is_nifti(self):
-        if self.path is not None:
-            name = self.path
-        else:
-            name = self.filename
-
+        name = self.path if self.path is not None else self.filename
         return name.endswith(".nii") or \
-            name.endswith(".nii.gz") or \
-            name.endswith(".img") or \
-            name.endswith(".hrd")
+                name.endswith(".nii.gz") or \
+                name.endswith(".img") or \
+                name.endswith(".hrd")
 
     def get_sha_sum(self, nifti_file):
         nifti_img = nib.load(nifti_file)
@@ -313,16 +296,17 @@ class NIDMFile(NIDMObject):
             if export_dir is not None:
                 # Copy file only if export_dir is not None
                 new_file = os.path.join(export_dir, self.filename)
-                if not self.path == new_file:
+                if self.path != new_file:
                     if prepend_path.endswith('.zip'):
                         with zipfile.ZipFile(prepend_path) as z:
                             extracted = z.extract(str(self.path), export_dir)
                             shutil.move(extracted, new_file)
                     else:
-                        if prepend_path:
-                            file_copied = os.path.join(prepend_path, self.path)
-                        else:
-                            file_copied = self.path
+                        file_copied = (
+                            os.path.join(prepend_path, self.path)
+                            if prepend_path
+                            else self.path
+                        )
                         shutil.copy(file_copied, new_file)
 
                     if self.temporary:
@@ -331,7 +315,7 @@ class NIDMFile(NIDMObject):
                 new_file = self.path
 
         if nidm_version['num'] in ["1.0.0", "1.1.0"]:
-            loc = Identifier("file://./" + self.filename)
+            loc = Identifier(f"file://./{self.filename}")
         else:
             loc = Identifier(self.filename)
 
@@ -343,7 +327,7 @@ class NIDMFile(NIDMObject):
         if nidm_version['num'] in ("1.0.0", "1.1.0"):
             path, org_filename = os.path.split(self.path)
             if (org_filename is not self.filename) \
-                    and (not self.temporary):
+                        and (not self.temporary):
                 self.add_attributes([(NFO['fileName'], org_filename)])
 
         if self.is_nifti():
@@ -372,25 +356,24 @@ class Image(NIDMObject):
         self.label = ""  # Enable printing
 
     @classmethod
-    def get_query(klass, oid=None):
-        if oid is None:
-            oid_var = "?oid"
-        else:
-            oid_var = "<" + str(oid) + ">"
-
-        query = """
+    def get_query(cls, oid=None):
+        oid_var = "?oid" if oid is None else f"<{str(oid)}>"
+        return (
+            """
         prefix dctype: <http://purl.org/dc/dcmitype/>
 
 
         SELECT * WHERE
                 {
-            """ + oid_var + """ a dctype:Image ;
+            """
+            + oid_var
+            + """ a dctype:Image ;
             prov:atLocation ?image_file ;
             nfo:fileName ?filename ;
             dct:format ?fmt .
             }
         """
-        return query
+        )
 
     def export(self, nidm_version, export_dir):
         """
@@ -415,15 +398,14 @@ class NeuroimagingSoftware(NIDMObject):
 
         if isinstance(software_type, QualifiedName):
             self.type = software_type
+        elif software_type.startswith('http'):
+            self.type = Identifier(software_type)
+        elif software_type.lower() == "fsl":
+            self.type = SCR_FSL
         else:
-            if software_type.startswith('http'):
-                self.type = Identifier(software_type)
-            elif software_type.lower() == "fsl":
-                self.type = SCR_FSL
-            else:
-                warnings.warn('Unrecognised software: ' + str(software_type))
-                self.name = str(software_type)
-                self.type = None
+            warnings.warn(f'Unrecognised software: {str(software_type)}')
+            self.name = str(software_type)
+            self.type = None
 
         # FIXME: get label from owl!
         if self.type == SCR_FSL:
@@ -431,24 +413,18 @@ class NeuroimagingSoftware(NIDMObject):
         elif self.type == SCR_SPM:
             self.name = "SPM"
         else:
-            warnings.warn('Unrecognised software: ' + str(software_type))
+            warnings.warn(f'Unrecognised software: {str(software_type)}')
             self.name = str(software_type)
 
-        if not label:
-            self.label = self.name
-        else:
-            self.label = label
+        self.label = self.name if not label else label
         self.prov_type = PROV['Agent']
         self.feat_version = feat_version
 
     @classmethod
-    def get_query(klass, oid=None):
-        if oid is None:
-            oid_var = "?oid"
-        else:
-            oid_var = "<" + str(oid) + ">"
-
-        query = """
+    def get_query(cls, oid=None):
+        oid_var = "?oid" if oid is None else f"<{str(oid)}>"
+        return (
+            """
 prefix nidm_softwareVersion: <http://purl.org/nidash/nidm#NIDM_0000122>
 prefix fsl_featVersion: <http://purl.org/nidash/fsl#FSL_0000005>
 prefix nidm_ModelParametersEstimation: <http://purl.org/nidash/nidm#NIDM_00000\
@@ -456,19 +432,27 @@ prefix nidm_ModelParametersEstimation: <http://purl.org/nidash/nidm#NIDM_00000\
 
 SELECT DISTINCT * WHERE
         {
-    """ + oid_var + """ a prov:SoftwareAgent ;
+    """
+            + oid_var
+            + """ a prov:SoftwareAgent ;
         nidm_softwareVersion: ?version .
 
     [] a nidm_ModelParametersEstimation: ;
-        prov:wasAssociatedWith """ + oid_var + """ .
+        prov:wasAssociatedWith """
+            + oid_var
+            + """ .
 
-    OPTIONAL {""" + oid_var + """ a ?software_type .} .
-    OPTIONAL {""" + oid_var + """ fsl_featVersion: ?feat_version .} .
+    OPTIONAL {"""
+            + oid_var
+            + """ a ?software_type .} .
+    OPTIONAL {"""
+            + oid_var
+            + """ fsl_featVersion: ?feat_version .} .
 
     FILTER ( ?software_type NOT IN (prov:SoftwareAgent, prov:Agent) )
     }
         """
-        return query
+        )
 
     def export(self, nidm_version, export_dir):
         """
@@ -503,27 +487,23 @@ class ExporterSoftware(NIDMObject):
         self.version = version
 
         if label is None:
-            if software_type == NIDM_FSL:
-                self.label = "nidmfsl"
-            else:
-                self.label = str(software_type)
+            self.label = "nidmfsl" if software_type == NIDM_FSL else str(software_type)
         else:
             self.label = label
 
     @classmethod
-    def get_query(klass, oid=None):
-        if oid is None:
-            oid_var = "?oid"
-        else:
-            oid_var = "<" + str(oid) + ">"
-
-        query = """
+    def get_query(cls, oid=None):
+        oid_var = "?oid" if oid is None else f"<{str(oid)}>"
+        return (
+            """
 prefix nidm_softwareVersion: <http://purl.org/nidash/nidm#NIDM_0000122>
 prefix nidm_NIDMResultsExport: <http://purl.org/nidash/nidm#NIDM_0000166>
 
 SELECT DISTINCT * WHERE
         {
-    """ + oid_var + """ a prov:SoftwareAgent ;
+    """
+            + oid_var
+            + """ a prov:SoftwareAgent ;
         rdfs:label  ?label ;
         rdf:type ?software_type ;
         nidm_softwareVersion: ?version .
@@ -531,7 +511,7 @@ SELECT DISTINCT * WHERE
     FILTER ( ?software_type NOT IN (prov:SoftwareAgent, prov:Agent) )
     }
         """
-        return query
+        )
 
     def export(self, nidm_version, export_dir):
         """
@@ -553,28 +533,24 @@ class NIDMResultsExport(NIDMObject):
         super(NIDMResultsExport, self).__init__(oid=oid)
         self.type = NIDM_NIDM_RESULTS_EXPORT
         self.prov_type = PROV['Activity']
-        if label is None:
-            self.label = "NIDM-Results export"
-        else:
-            self.label = label
+        self.label = "NIDM-Results export" if label is None else label
 
     @classmethod
-    def get_query(klass, oid=None):
-        if oid is None:
-            oid_var = "?oid"
-        else:
-            oid_var = "<" + str(oid) + ">"
-
-        query = """
+    def get_query(cls, oid=None):
+        oid_var = "?oid" if oid is None else f"<{str(oid)}>"
+        return (
+            """
 prefix nidm_NIDMResultsExport: <http://purl.org/nidash/nidm#NIDM_0000166>
 
 SELECT DISTINCT * WHERE
     {
-    """ + oid_var + """ a nidm_NIDMResultsExport: ;
+    """
+            + oid_var
+            + """ a nidm_NIDMResultsExport: ;
         rdfs:label ?label .
     }
         """
-        return query
+        )
 
     def export(self, nidm_version, export_dir):
         """

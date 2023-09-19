@@ -7,6 +7,7 @@ specification. The path to feat directory must be passed as first argument.
 @copyright: University of Warwick 2013-2014
 """
 
+
 from __future__ import division, print_function, absolute_import
 import os
 import argparse
@@ -25,7 +26,7 @@ if __name__ == "__main__":
 
     nidm_pack = args.nidm_pack
     if not os.path.isfile(nidm_pack):
-        raise Exception("Unknown file: "+str(nidm_pack))
+        raise Exception(f"Unknown file: {str(nidm_pack)}")
 
     nidm_graph = Graph(nidm_zip=nidm_pack)
     nidm_graph.parse()

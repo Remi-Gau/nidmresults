@@ -54,8 +54,7 @@ class OwlReader():
 
     def get_class_names(self):
         # Add PROV sub-types
-        sub_types = set([PROV['Bundle'], PROV['Location'],
-                         PROV['Collection']])
+        sub_types = {PROV['Bundle'], PROV['Location'], PROV['Collection']}
 
         for class_name in self.graph.subjects(RDF['type'], OWL['Class']):
             if not isinstance(class_name, term.BNode):
@@ -64,33 +63,27 @@ class OwlReader():
         return sub_types
 
     def get_direct_children(self, term):
-        # Find all direct children of 'term'
-        children = set()
-
-        for class_name in self.graph.subjects(RDFS['subClassOf'], term):
-            if not self.is_deprecated(class_name):
-                children.add(class_name)
-
-        return children
+        return {
+            class_name
+            for class_name in self.graph.subjects(RDFS['subClassOf'], term)
+            if not self.is_deprecated(class_name)
+        }
 
     def get_direct_parents(self, term):
-        # Find all direct parents of 'term'
-        parents = set()
-
-        for parent_name in self.graph.objects(term, RDFS['subClassOf']):
-            parents.add(parent_name)
-
-        return parents
+        return set(self.graph.objects(term, RDFS['subClassOf']))
 
     def get_nidm_parent(self, term):
         # Find direct nidm parent of 'term'
         parents = self.get_direct_parents(term)
 
-        for parent in parents:
-            if not self.is_external_namespace(parent):
-                return parent
-
-        return None
+        return next(
+            (
+                parent
+                for parent in parents
+                if not self.is_external_namespace(parent)
+            ),
+            None,
+        )
 
     def is_class(self, uri):
         return (uri, RDF['type'], OWL['Class']) in self.graph
@@ -111,10 +104,11 @@ class OwlReader():
         # FIXME: Is there a more efficient way?
         if prefix:
             original_classes = classes
-            classes = list()
-            for class_name in original_classes:
-                if class_name.startswith(prefix):
-                    classes.append(class_name)
+            classes = [
+                class_name
+                for class_name in original_classes
+                if class_name.startswith(prefix)
+            ]
         if but:
             classes = list(set(classes) - set(but))
 
@@ -125,7 +119,7 @@ class OwlReader():
         return self.all_of_rdf_type(OWL['Class'], prefix, but)
 
     def get_by_namespaces(self, term_list, but=None):
-        by_nsp = dict()
+        by_nsp = {}
         ignored = []
 
         for uri in term_list:
@@ -138,8 +132,8 @@ class OwlReader():
                     nsp = None
 
                 if (str(nsp) not in but) and \
-                        ((qname is None) or (not qname.startswith(but))):
-                    by_nsp.setdefault(nsp, list()).append(uri)
+                            ((qname is None) or (not qname.startswith(but))):
+                    by_nsp.setdefault(nsp, []).append(uri)
                 else:
                     ignored.append(uri)
 
@@ -149,53 +143,56 @@ class OwlReader():
         return by_nsp
 
     def count_by_namespaces(self):
-        owl_types = list([OWL['Class'], OWL['DatatypeProperty'],
-                          OWL['ObjectProperty'], OWL['NamedIndividual']])
+        owl_types = [
+            OWL['Class'],
+            OWL['DatatypeProperty'],
+            OWL['ObjectProperty'],
+            OWL['NamedIndividual'],
+        ]
 
         # Ignore the following namespaces/terms (not part of the model) from
         # the count
         but = ("owl", "rdf", "prv", "protege", "xsd", "obo:IAO_", "iao",
                "obo:iao.owl", "prov")
 
-        counter_dict = dict()
+        counter_dict = {}
 
         counter = 0
 
-        all_terms = dict()
+        all_terms = {}
+        # print(counter)
+        comp_to = ""
+
         for owl_type in owl_types:
             terms = self.get_by_namespaces(self.all_of_rdf_type(owl_type), but)
             keys = set(all_terms).union(terms)
             no = []
-            all_terms = dict(
-                (k, all_terms.get(k, no) + terms.get(k, no)) for k in keys)
+            all_terms = {k: all_terms.get(k, no) + terms.get(k, no) for k in keys}
 
             len_dict = {
                 key: (len(value), terms) for (key, value) in
                 list(terms.items()) if key is not None}
-            num = sum([x[0] for x in list(len_dict.values())])
+            num = sum(x[0] for x in list(len_dict.values()))
             type_id = self.graph.qname(owl_type).split(":")[1]
             counter = counter + num
-            # print(counter)
-            comp_to = ""
-
             counter_dict[type_id] = (num, len_dict)
 
         num_attributes = counter_dict['DatatypeProperty'][0] + \
-            counter_dict['ObjectProperty'][0]
+                counter_dict['ObjectProperty'][0]
         num_classes = counter_dict['Class'][0] + \
-            counter_dict['NamedIndividual'][0]
+                counter_dict['NamedIndividual'][0]
         num_terms = num_attributes + num_classes
 
         all_terms_len = {key: (len(value), value) for (key, value) in
                          list(all_terms.items()) if key is not None}
 
         num_defined = all_terms_len['nidm'][0] + all_terms_len['spm'][0] + \
-            all_terms_len['fsl'][0]
+                all_terms_len['fsl'][0]
         num_reused = num_terms - num_defined
 
         # Sanity check
-        num_terms_from_all = sum([x[0] for x in list(all_terms_len.values())])
-        if not num_terms_from_all == num_terms:
+        num_terms_from_all = sum(x[0] for x in list(all_terms_len.values()))
+        if num_terms_from_all != num_terms:
             raise Exception('Error: number of terms from all is inconsistent.')
 
         return (num_terms, num_classes, num_attributes, num_reused,
@@ -203,56 +200,49 @@ class OwlReader():
 
     def get_class_names_by_prov_type(self, classes=None, prefix=None,
                                      but=None):
-        class_names = dict()
-        # We at least want to have an output for Entity, Activity and Agent
-        class_names[PROV['Entity']] = list()
-        class_names[PROV['Activity']] = list()
-        class_names[PROV['Agent']] = list()
-
-        class_names[None] = list()
-
+        class_names = {
+            PROV['Entity']: [],
+            PROV['Activity']: [],
+            PROV['Agent']: [],
+            None: [],
+        }
         if not classes:
             classes = self.get_classes(prefix, but)
 
         for class_name in classes:
             if not self.is_class(class_name):
-                warnings.warn('Class '+str(class_name)+' does not exist.')
+                warnings.warn(f'Class {str(class_name)} does not exist.')
 
             if not isinstance(class_name, term.BNode):
-                prov_type = self.get_prov_class(class_name)
-                if prov_type:
-                    class_names.setdefault(prov_type, list())\
-                               .append(class_name)
+                if prov_type := self.get_prov_class(class_name):
+                    class_names.setdefault(prov_type, []).append(class_name)
                 else:
                     prov_type_found = False
                     parent_classes = self.get_direct_parents(class_name)
                     for parent_class in parent_classes:
-                        prov_type = self.get_prov_class(parent_class,
-                                                        recursive=6)
-                        if prov_type:
-                            class_names.setdefault(prov_type, list())\
-                                       .append(class_name)
+                        if prov_type := self.get_prov_class(
+                            parent_class, recursive=6
+                        ):
+                            class_names.setdefault(prov_type, []).append(class_name)
                             prov_type_found = True
 
                     if not prov_type_found:
-                        warnings.warn('No PROV type for class: ' +
-                                      self.graph.qname(class_name))
-                        class_names.setdefault(None, list()).append(class_name)
+                        warnings.warn(f'No PROV type for class: {self.graph.qname(class_name)}')
+                        class_names.setdefault(None, []).append(class_name)
 
         return class_names
 
     def is_deprecated(self, term):
-        deprecated = False
-        if (term, OWL['deprecated'], Literal(True)) in self.graph:
-            deprecated = True
-        return deprecated
+        return (term, OWL['deprecated'], Literal(True)) in self.graph
 
     def get_property_names(self):
-        properties = set()
-        for class_name in self.graph.subjects(
-                RDF['type'], OWL['DatatypeProperty']):
-            if not self.is_deprecated(class_name):
-                properties.add(class_name)
+        properties = {
+            class_name
+            for class_name in self.graph.subjects(
+                RDF['type'], OWL['DatatypeProperty']
+            )
+            if not self.is_deprecated(class_name)
+        }
         for class_name in self.graph.subjects(
                 RDF['type'], OWL['ObjectProperty']):
             if not self.is_deprecated(class_name):
@@ -272,13 +262,13 @@ class OwlReader():
         return list(individuals)
 
     def get_attributes(self):
-        attributes = dict()
+        attributes = {}
         # For each ObjectProperty found out corresponding range
-        ranges = dict()
+        ranges = {}
 
-        parent_ranges = dict()
+        parent_ranges = {}
 
-        restrictions = dict()
+        restrictions = {}
 
         # Check owl restrictions on classes
         for class_name in self.graph.subjects(RDF['type'], OWL['Class']):
@@ -298,7 +288,7 @@ class OwlReader():
         # Attributes that can be found in all classes
         for prp, p, o in self.graph.triples((None, RDF['type'], None)):
             if not self.is_deprecated(prp):
-                if o == OWL['DatatypeProperty'] or o == OWL['ObjectProperty']:
+                if o in [OWL['DatatypeProperty'], OWL['ObjectProperty']]:
                     for class_name in self.graph.objects(prp, RDFS['domain']):
                         if not self.is_deprecated(class_name):
                             # Add attribute to current class
@@ -319,25 +309,25 @@ class OwlReader():
                                     range_name, OWL['withRestrictions']):
                                 for first_restriction in self.graph.objects(
                                         restriction_node, RDF['first']):
-                                    xsd_restrictions = set(
-                                        ['minInclusive', 'minExclusive',
-                                         'maxInclusive', 'maxExclusive'])
+                                    xsd_restrictions = {
+                                        'minInclusive',
+                                        'minExclusive',
+                                        'maxInclusive',
+                                        'maxExclusive',
+                                    }
                                     for rct in xsd_restrictions:
                                         for min_incl in self.graph.objects(
                                                 first_restriction,
                                                 XSD[rct]):
-                                            if (prp in restrictions):
-                                                if (rct in restrictions[prp]):
-                                                    restrictions[prp] = max(
-                                                        restrictions[prp][rct],
-                                                        min_incl)
-                                                else:
-                                                    restrictions[prp] = {
-                                                        rct: min_incl}
+                                            if (prp in restrictions) and (
+                                                rct in restrictions[prp]
+                                            ):
+                                                restrictions[prp] = max(
+                                                    restrictions[prp][rct],
+                                                    min_incl)
                                             else:
                                                 restrictions[prp] = {
                                                     rct: min_incl}
-
                             for sub_range_name in self.graph.objects(
                                     range_name, OWL['onDatatype']):
                                 range_name = sub_range_name
@@ -359,7 +349,7 @@ class OwlReader():
                                     ranges.setdefault(
                                         prp, set()).add(XSD['double'])
 
-        return list((attributes, ranges, restrictions, parent_ranges))
+        return [attributes, ranges, restrictions, parent_ranges]
 
     def get_graph(self):
         # Read owl (turtle) file
@@ -400,7 +390,7 @@ class OwlReader():
 
     def get_prov_class(self, owl_term, recursive=3):
         if not isinstance(owl_term, term.BNode) and \
-                self.graph.qname(owl_term).startswith("prov:"):
+                    self.graph.qname(owl_term).startswith("prov:"):
             prov_class = owl_term
         else:
             parent_classes = list(self.graph.objects(
@@ -424,21 +414,37 @@ class OwlReader():
                                 break
 
         # Get mor generic PROV types
-        if prov_class in set([PROV['SoftwareAgent'], PROV['Organization'],
-                              PROV['Person']]):
+        if prov_class in {
+            PROV['SoftwareAgent'],
+            PROV['Organization'],
+            PROV['Person'],
+        }:
             prov_class = PROV['Agent']
-        if prov_class in set([PROV['Collection'], PROV['Location'],
-                              PROV['Bundle'], PROV['Plan'],
-                              PROV['EmptyCollection']]):
+        if prov_class in {
+            PROV['Collection'],
+            PROV['Location'],
+            PROV['Bundle'],
+            PROV['Plan'],
+            PROV['EmptyCollection'],
+        }:
             prov_class = PROV['Entity']
-        if prov_class in set([
-                PROV['Usage'], PROV['AgentInfluence'],
-                PROV['Derivation'], PROV['PrimarySource'],
-                PROV['ActivityInfluence'], PROV['Delegation'],
-                PROV['Start'], PROV['EntityInfluence'], PROV['Quotation'],
-                PROV['End'], PROV['Attribution'], PROV['Association'],
-                PROV['Revision'], PROV['Communication'],
-                PROV['Generation']]):
+        if prov_class in {
+            PROV['Usage'],
+            PROV['AgentInfluence'],
+            PROV['Derivation'],
+            PROV['PrimarySource'],
+            PROV['ActivityInfluence'],
+            PROV['Delegation'],
+            PROV['Start'],
+            PROV['EntityInfluence'],
+            PROV['Quotation'],
+            PROV['End'],
+            PROV['Attribution'],
+            PROV['Association'],
+            PROV['Revision'],
+            PROV['Communication'],
+            PROV['Generation'],
+        }:
             prov_class = PROV['Influence']
         if prov_class == PROV['Invalidation']:
             prov_class = PROV['InstantaneousEvent']
@@ -447,8 +453,7 @@ class OwlReader():
 
     def get_definition(self, owl_term, add_links=True):
         definition = list(self.graph.objects(owl_term, OBO_DEFINITION))
-        definition = definition + \
-            list(self.graph.objects(owl_term, SKOS_DEFINITION))
+        definition += list(self.graph.objects(owl_term, SKOS_DEFINITION))
 
         if definition:
             if len(definition) > 1:
@@ -469,7 +474,7 @@ class OwlReader():
                 if str(literal) in self.labels:
                     purl = self.labels[str(literal)]
                     if "#" in purl and \
-                            not self.is_deprecated(term.URIRef(mterm)):
+                                not self.is_deprecated(term.URIRef(mterm)):
                         definition = definition.replace(
                             mterm,
                             "<a title=" +
@@ -488,41 +493,31 @@ class OwlReader():
         if OWL['NamedIndividual'] in indiv_type:
             indiv_type.remove(OWL['NamedIndividual'])
 
-        if indiv_type:
-            indiv_type = ", ".join(map(self.graph.qname, indiv_type))
-        else:
-            indiv_type = ""
+        indiv_type = ", ".join(map(self.graph.qname, indiv_type)) if indiv_type else ""
         return indiv_type
 
     def get_same_as(self, owl_term):
         same_as = list(self.graph.objects(owl_term, OWL['sameAs']))
-        if same_as:
-            same_as = ", ".join(same_as)
-        else:
-            same_as = ""
+        same_as = ", ".join(same_as) if same_as else ""
         return same_as
 
     def get_used_by(self, owl_term):
-        used_by = list(self.graph.objects(owl_term, PROV['used']))
-        return used_by
+        return list(self.graph.objects(owl_term, PROV['used']))
 
     def get_generated_by(self, owl_term):
-        generated_by = list(self.graph.objects(
-            owl_term, PROV['wasGeneratedBy']))
-        return generated_by
+        return list(self.graph.objects(owl_term, PROV['wasGeneratedBy']))
 
     def get_example(self, owl_term, base_repository=None):
-        example_list = list()
+        example_list = []
 
         examples = list(self.graph.objects(owl_term, OBO_EXAMPLE))
 
         for example in examples:
             if (base_repository is not None) and \
-                    example.startswith(base_repository):
+                        example.startswith(base_repository):
                 local_path = example.replace(base_repository, "./")
-                fid_ex = open(local_path)
-                example = fid_ex.read()
-                fid_ex.close()
+                with open(local_path) as fid_ex:
+                    example = fid_ex.read()
             elif example.startswith("http"):
                 with vcr.use_cassette(
                         os.path.join(NIDM_PATH, 'vcr_cassettes/synopsis.yaml'),
@@ -533,7 +528,7 @@ class OwlReader():
             title = ""
             if example.startswith("#"):
                 title = (example.split('\n', 1)[0]).replace("#", "")
-                example = example.replace("#" + title, "")
+                example = example.replace(f"#{title}", "")
 
             example_list.append([title, example])
 
@@ -542,27 +537,23 @@ class OwlReader():
     def get_range(self, owl_term):
         ranges = list(self.graph.objects(owl_term, RDFS['range']))
 
-        range_display = ""
-
-        for range_value in ranges:
-            if not isinstance(range_value, term.BNode):
-                if isinstance(range_value, term.URIRef):
-                    range_display += str(self.graph.qname(range_value))+" "
-                else:
-                    range_display += str(range_value)
-        return range_display
+        return "".join(
+            f"{str(self.graph.qname(range_value))} "
+            if isinstance(range_value, term.URIRef)
+            else str(range_value)
+            for range_value in ranges
+            if not isinstance(range_value, term.BNode)
+        )
 
     def get_domain(self, owl_term):
         domains = list(self.graph.objects(owl_term, RDFS['domain']))
 
-        domain_display = ""
-
-        for domain_value in sorted(domains):
-            if isinstance(domain_value, term.URIRef):
-                domain_display += str(self.graph.qname(domain_value))+" "
-            else:
-                domain_display += str(domain_value)
-        return domain_display
+        return "".join(
+            f"{str(self.graph.qname(domain_value))} "
+            if isinstance(domain_value, term.URIRef)
+            else str(domain_value)
+            for domain_value in sorted(domains)
+        )
 
     def get_curation_status(self, owl_term):
         curation_status = list(self.graph.objects(
@@ -585,7 +576,7 @@ class OwlReader():
                 warnings.warn('Multiple editors for '
                               + self.get_label(owl_term) + ': '
                               + ",".join(editor))
-            editor = " (editor: "+editor[0]+")"
+            editor = f" (editor: {editor[0]})"
         else:
             editor = ""
         return editor
@@ -605,21 +596,21 @@ class OwlReader():
     def get_sub_class_names(self):
         sub_types = set()
 
-        prov_types = set([PROV['Entity'], PROV['Activity'], PROV['Agent']])
+        prov_types = {PROV['Entity'], PROV['Activity'], PROV['Agent']}
         for prov_type in prov_types:
             for instance_id in self.graph.subjects(RDF.type, prov_type):
                 for class_name in self.graph.objects(instance_id, RDF.type):
-                    if not class_name == prov_type:
+                    if class_name != prov_type:
                         sub_types.add(class_name)
 
         return sub_types
 
     def check_class_names(self, ex_graph, ex_name, raise_now=False):
-        my_exception = dict()
+        my_exception = {}
         error_msg = ""
         class_names = self.get_class_names()
 
-        unrecognised_classes = list()
+        unrecognised_classes = []
         # for class_name in ex_graph.subjects(RDF['type'], OWL['Class']):
         for class_name in ex_graph.objects(None, RDF.type):
             if not isinstance(class_name, term.BNode):
@@ -630,12 +621,12 @@ class OwlReader():
             if not unrecognised_class.startswith(str(PROV)):
                 # key = ex_graph.qname(not_recognised_sub_type)
                 key = "\n Unrecognised sub-type: " + \
-                    ex_graph.qname(unrecognised_class)
+                        ex_graph.qname(unrecognised_class)
                 error_msg += key
                 if key in my_exception:
                     my_exception[key].add(ex_name)
                 else:
-                    my_exception[key] = set([ex_name])
+                    my_exception[key] = {ex_name}
 
         if raise_now:
             if error_msg:

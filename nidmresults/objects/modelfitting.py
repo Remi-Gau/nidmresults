@@ -68,20 +68,13 @@ class ImagingInstrument(NIDMObject):
 
         self.prov_type = PROV['Agent']
 
-        if label is None:
-            self.label = machine_label[machine_type]
-        else:
-            self.label = label
+        self.label = machine_label[machine_type] if label is None else label
 
     @classmethod
-    def get_query(klass, oid=None):
-        if oid is None:
-            oid_var = "?oid"
-        else:
-            oid_var = "<" + str(oid) + ">"
-
-        # TODO: handle multiple basis
-        query = """
+    def get_query(cls, oid=None):
+        oid_var = "?oid" if oid is None else f"<{str(oid)}>"
+        return (
+            """
 prefix nlx_Imaginginstrument: <http://uri.neuinfo.org/nif/nifstd/birnlex_2094>
 prefix nlx_MagneticResonanceImagingScanner: <http://uri.neuinfo.org/nif/nifstd\
 /birnlex_2100>
@@ -95,21 +88,35 @@ prefix nlx_ElectroencephalographyMachine: <http://uri.neuinfo.org/nif/nifstd/i\
 xl_0050003>
 
 SELECT DISTINCT * WHERE {
-    {""" + oid_var + """ a nlx_Imaginginstrument: .} UNION
-    {""" + oid_var + """ a nlx_MagneticResonanceImagingScanner: .} UNION
-    {""" + oid_var + """ a nlx_PositronEmissionTomographyScanner: .} UNION
-    {""" + oid_var + """ a nlx_SinglePhotonEmissionComputedTomographyScanner: .} UNION
-    {""" + oid_var + """ a nlx_MagnetoencephalographyMachine: .} UNION
-    {""" + oid_var + """ a nlx_ElectroencephalographyMachine: .}
+    {"""
+            + oid_var
+            + """ a nlx_Imaginginstrument: .} UNION
+    {"""
+            + oid_var
+            + """ a nlx_MagneticResonanceImagingScanner: .} UNION
+    {"""
+            + oid_var
+            + """ a nlx_PositronEmissionTomographyScanner: .} UNION
+    {"""
+            + oid_var
+            + """ a nlx_SinglePhotonEmissionComputedTomographyScanner: .} UNION
+    {"""
+            + oid_var
+            + """ a nlx_MagnetoencephalographyMachine: .} UNION
+    {"""
+            + oid_var
+            + """ a nlx_ElectroencephalographyMachine: .}
 
-    """ + oid_var + """ rdfs:label ?label ;
+    """
+            + oid_var
+            + """ rdfs:label ?label ;
         rdf:type ?machine_type .
 
     FILTER ( ?machine_type NOT IN (prov:Agent, prov:SoftwareAgent, nlx_Imaging\
 instrument:) )
 }
         """
-        return query
+        )
 
     def export(self, nidm_version, export_dir):
         """
@@ -133,29 +140,28 @@ class Group(NIDMObject):
         self.group_name = group_name
         self.num_subjects = num_subjects
         if not label:
-            label = "Study group population: " + group_name
+            label = f"Study group population: {group_name}"
         self.label = label
 
     @classmethod
-    def get_query(klass, oid=None):
-        if oid is None:
-            oid_var = "?oid"
-        else:
-            oid_var = "<" + str(oid) + ">"
-
-        query = """
+    def get_query(cls, oid=None):
+        oid_var = "?oid" if oid is None else f"<{str(oid)}>"
+        return (
+            """
 prefix obo_studygrouppopulation: <http://purl.obolibrary.org/obo/STATO_0000193>
 prefix nidm_groupName: <http://purl.org/nidash/nidm#NIDM_0000170>
 prefix nidm_numberOfSubjects: <http://purl.org/nidash/nidm#NIDM_0000171>
 
 SELECT DISTINCT * WHERE {
-    """ + oid_var + """ a obo_studygrouppopulation: ;
+    """
+            + oid_var
+            + """ a obo_studygrouppopulation: ;
         rdfs:label ?label ;
         nidm_groupName: ?group_name ;
         nidm_numberOfSubjects: ?num_subjects .
 }
         """
-        return query
+        )
 
     def export(self, nidm_version, export_dir):
         """
@@ -182,19 +188,18 @@ class Person(NIDMObject):
         self.label = label
 
     @classmethod
-    def get_query(klass, oid=None):
-        if oid is None:
-            oid_var = "?oid"
-        else:
-            oid_var = "<" + str(oid) + ">"
-
-        query = """
+    def get_query(cls, oid=None):
+        oid_var = "?oid" if oid is None else f"<{str(oid)}>"
+        return (
+            """
             SELECT DISTINCT * WHERE {
-            """ + oid_var + """ a prov:Person ;
+            """
+            + oid_var
+            + """ a prov:Person ;
                 rdfs:label ?label .
         }
         """
-        return query
+        )
 
     def export(self, nidm_version, export_dir):
         """
@@ -219,12 +224,12 @@ class DesignMatrix(NIDMObject):
         super(DesignMatrix, self).__init__(oid=oid)
         self.type = NIDM_DESIGN_MATRIX
         self.prov_type = PROV['Entity']
-        img_filename = 'DesignMatrix' + suffix + '.png'
+        img_filename = f'DesignMatrix{suffix}.png'
         if isinstance(image_file, Image):
             self.image = image_file
         else:
             self.image = Image(image_file, img_filename)
-        if not type(regressors) is list:
+        if type(regressors) is not list:
             regressors = json.loads(regressors)
         self.regressors = regressors
 
@@ -233,7 +238,7 @@ class DesignMatrix(NIDMObject):
 
         self.drift_model = drift_model
         if csv_file is None:
-            self.csv_file = 'DesignMatrix' + suffix + '.csv'
+            self.csv_file = f'DesignMatrix{suffix}.csv'
             self.matrix = matrix
         else:
             self.csv_file = csv_file
@@ -241,39 +246,33 @@ class DesignMatrix(NIDMObject):
             # have the root to append...
             # self.matrix = genfromtxt(self.csv_file, delimiter=',')
             self.matrix = []
-        if filename is None:
-            self.filename = 'DesignMatrix' + suffix + '.csv'
-        else:
-            self.filename = filename
-        if label is not None:
-            self.label = label
-        else:
-            self.label = "Design Matrix"
+        self.filename = f'DesignMatrix{suffix}.csv' if filename is None else filename
+        self.label = label if label is not None else "Design Matrix"
 
     @classmethod
-    def get_query(klass, oid=None):
-        if oid is None:
-            oid_var = "?oid"
-        else:
-            oid_var = "<" + str(oid) + ">"
-
-        # TODO: handle multiple basis
-        query = """
+    def get_query(cls, oid=None):
+        oid_var = "?oid" if oid is None else f"<{str(oid)}>"
+        return (
+            """
 prefix nidm_ModelParameterEstimation: <http://purl.org/nidash/nidm#NIDM_000005\
 6>
 prefix nidm_withEstimationMethod: <http://purl.org/nidash/nidm#NIDM_0000134>
 prefix nidm_hasHRFBasis: <http://purl.org/nidash/nidm#NIDM_0000102>
 
 SELECT DISTINCT * WHERE {
-    """ + oid_var + """ a nidm_DesignMatrix: ;
+    """
+            + oid_var
+            + """ a nidm_DesignMatrix: ;
         rdfs:label ?label ;
         prov:atLocation ?csv_file ;
         nfo:fileName ?filename .
 
-    OPTIONAL { """ + oid_var + """ nidm_regressorNames: ?regressors . } .
+    OPTIONAL { """
+            + oid_var
+            + """ nidm_regressorNames: ?regressors . } .
 }
         """
-        return query
+        )
 
     def export(self, nidm_version, export_dir):
         """
@@ -284,7 +283,7 @@ SELECT DISTINCT * WHERE {
                    np.asarray(self.matrix), delimiter=",")
 
         if nidm_version['num'] in ["1.0.0", "1.1.0"]:
-            csv_location = Identifier("file://./" + self.csv_file)
+            csv_location = Identifier(f"file://./{self.csv_file}")
         else:
             csv_location = Identifier(self.csv_file)
 
@@ -305,8 +304,9 @@ SELECT DISTINCT * WHERE {
                     warnings.warn("Design type is missing")
 
             # hrf model
-            for hrf_model in self.hrf_models:
-                attributes.append((NIDM_HAS_HRF_BASIS, hrf_model))
+            attributes.extend(
+                (NIDM_HAS_HRF_BASIS, hrf_model) for hrf_model in self.hrf_models
+            )
             # drift model
             if self.drift_model is not None:
                 attributes.append((NIDM_HAS_DRIFT_MODEL, self.drift_model.id))
@@ -331,38 +331,43 @@ class DriftModel(NIDMObject):
         self.parameter = parameter
         self.type = drift_type
         self.prov_type = PROV['Entity']
-        if not label:
-            if self.drift_type == FSL_GAUSSIAN_RUNNING_LINE_DRIFT_MODEL:
-                self.label = "FSL's Gaussian Running Line Drift Model"
-        else:
+        if label:
             self.label = label
 
-    @classmethod
-    def get_query(klass, oid=None):
-        if oid is None:
-            oid_var = "?oid"
-        else:
-            oid_var = "<" + str(oid) + ">"
+        elif self.drift_type == FSL_GAUSSIAN_RUNNING_LINE_DRIFT_MODEL:
+            self.label = "FSL's Gaussian Running Line Drift Model"
 
-        query = """
+    @classmethod
+    def get_query(cls, oid=None):
+        oid_var = "?oid" if oid is None else f"<{str(oid)}>"
+        return (
+            """
 prefix nidm_DesignMatrix: <http://purl.org/nidash/nidm#NIDM_0000019>
 prefix spm_SPMsDriftCutoffPeriod: <http://purl.org/nidash/spm#SPM_0000001>
 prefix fsl_driftCutoffPeriod: <http://purl.org/nidash/fsl#FSL_0000004>
 
 SELECT DISTINCT * WHERE {
     [] a nidm_DesignMatrix: ;
-        nidm_hasDriftModel: """ + oid_var + """ .
+        nidm_hasDriftModel: """
+            + oid_var
+            + """ .
 
-    """ + oid_var + """ a ?drift_type ;
+    """
+            + oid_var
+            + """ a ?drift_type ;
         rdfs:label ?label .
 
-    {""" + oid_var + """ spm_SPMsDriftCutoffPeriod: ?parameter .} UNION
-    {""" + oid_var + """ fsl_driftCutoffPeriod: ?parameter .} .
+    {"""
+            + oid_var
+            + """ spm_SPMsDriftCutoffPeriod: ?parameter .} UNION
+    {"""
+            + oid_var
+            + """ fsl_driftCutoffPeriod: ?parameter .} .
 
     FILTER ( ?drift_type NOT IN (prov:Entity) )
 }
         """
-        return query
+        )
 
     def export(self, nidm_version, export_dir):
         """
@@ -403,13 +408,10 @@ class Data(NIDMObject):
         self.group_or_sub = group_or_sub
 
     @classmethod
-    def get_query(klass, oid=None):
-        if oid is None:
-            oid_var = "?oid"
-        else:
-            oid_var = "<" + str(oid) + ">"
-
-        query = """
+    def get_query(cls, oid=None):
+        oid_var = "?oid" if oid is None else f"<{str(oid)}>"
+        return (
+            """
 prefix nidm_Data: <http://purl.org/nidash/nidm#NIDM_0000169>
 prefix nidm_grandMeanScaling: <http://purl.org/nidash/nidm#NIDM_0000096>
 prefix nidm_targetIntensity: <http://purl.org/nidash/nidm#NIDM_0000124>
@@ -419,14 +421,20 @@ prefix nlx_FunctionalMRIprotocol: <http://uri.neuinfo.org/nif/nifstd/birnlex_2\
 
 
 SELECT DISTINCT * WHERE {
-    """ + oid_var + """ a nidm_Data: ;
+    """
+            + oid_var
+            + """ a nidm_Data: ;
         rdfs:label ?label ;
         nidm_grandMeanScaling: $grand_mean_scaling .
-    OPTIONAL {""" + oid_var + """ nidm_targetIntensity: ?target . } .
-    OPTIONAL {""" + oid_var + """ nidm_hasMRIProtocol: ?mri_protocol . } .
+    OPTIONAL {"""
+            + oid_var
+            + """ nidm_targetIntensity: ?target . } .
+    OPTIONAL {"""
+            + oid_var
+            + """ nidm_hasMRIProtocol: ?mri_protocol . } .
 }
         """
-        return query
+        )
 
     def export(self, nidm_version, export_dir):
         """
@@ -470,13 +478,10 @@ class ErrorModel(NIDMObject):
         self.prov_type = PROV['Entity']
 
     @classmethod
-    def get_query(klass, oid=None):
-        if oid is None:
-            oid_var = "?oid"
-        else:
-            oid_var = "<" + str(oid) + ">"
-
-        query = """
+    def get_query(cls, oid=None):
+        oid_var = "?oid" if oid is None else f"<{str(oid)}>"
+        return (
+            """
 prefix nidm_ErrorModel: <http://purl.org/nidash/nidm#NIDM_0000023>
 prefix nidm_hasErrorDistribution: <http://purl.org/nidash/nidm#NIDM_0000101>
 prefix nidm_errorVarianceHomogeneous: <http://purl.org/nidash/nidm#NIDM_000009\
@@ -488,17 +493,23 @@ prefix nidm_dependenceMapWiseDependence: <http://purl.org/nidash/nidm#NIDM_000\
 0089>
 
 SELECT DISTINCT * WHERE {
-    """ + oid_var + """ a nidm_ErrorModel: ;
+    """
+            + oid_var
+            + """ a nidm_ErrorModel: ;
         nidm_hasErrorDistribution: $error_distribution ;
         nidm_errorVarianceHomogeneous: $variance_homo ;
         nidm_varianceMapWiseDependence: $variance_spatial ;
         nidm_hasErrorDependence: $dependance .
 
-    OPTIONAL {""" + oid_var + """ rdfs:label ?label . } .
-    OPTIONAL {""" + oid_var + """ nidm_dependenceMapWiseDependence: ?dependance_spatial . } .
+    OPTIONAL {"""
+            + oid_var
+            + """ rdfs:label ?label . } .
+    OPTIONAL {"""
+            + oid_var
+            + """ nidm_dependenceMapWiseDependence: ?dependance_spatial . } .
 }
         """
-        return query
+        )
 
     def export(self, nidm_version, export_dir):
         """
@@ -541,25 +552,24 @@ class ModelParametersEstimation(NIDMObject):
         self.label = label
 
     @classmethod
-    def get_query(klass, oid=None):
-        if oid is None:
-            oid_var = "?oid"
-        else:
-            oid_var = "<" + str(oid) + ">"
-
-        query = """
+    def get_query(cls, oid=None):
+        oid_var = "?oid" if oid is None else f"<{str(oid)}>"
+        return (
+            """
 prefix nidm_ModelParameterEstimation: <http://purl.org/nidash/nidm#NIDM_000005\
 6>
 prefix nidm_withEstimationMethod: <http://purl.org/nidash/nidm#NIDM_0000134>
 
 SELECT DISTINCT * WHERE {
-    """ + oid_var + """ a nidm_ModelParameterEstimation: ;
+    """
+            + oid_var
+            + """ a nidm_ModelParameterEstimation: ;
         rdfs:label ?label ;
         nidm_withEstimationMethod: ?estimation_method ;
         prov:wasAssociatedWith ?software_id .
 }
         """
-        return query
+        )
 
     def export(self, nidm_version, export_dir):
         """
@@ -588,7 +598,7 @@ class ParameterEstimateMap(NIDMObject):
         self.coord_space = coord_space
         # Parameter Estimate Map is going to be copied over to export_dir
         if not filename:
-            filename = 'ParameterEstimate' + suffix + '.nii.gz'
+            filename = f'ParameterEstimate{suffix}.nii.gz'
 
         self.file = NIDMFile(self.id, pe_file, filename=filename, sha=sha,
                              fmt=fmt)
@@ -596,11 +606,7 @@ class ParameterEstimateMap(NIDMObject):
         self.type = NIDM_PARAMETER_ESTIMATE_MAP
         self.prov_type = PROV['Entity']
         if label is None:
-            if self.num:
-                label = "Parameter estimate " + str(self.num)
-            else:
-                label = None
-
+            label = f"Parameter estimate {str(self.num)}" if self.num else None
         self.label = label
         # Only used for reading (so far)
         self.model_param_estimation = model_param_estimation
@@ -615,25 +621,28 @@ class ParameterEstimateMap(NIDMObject):
         self.isderfrommap = isderfrommap
 
     @classmethod
-    def get_query(klass, oid=None):
-        if oid is None:
-            oid_var = "?oid"
-        else:
-            oid_var = "<" + str(oid) + ">"
-
-        query = """
+    def get_query(cls, oid=None):
+        oid_var = "?oid" if oid is None else f"<{str(oid)}>"
+        return (
+            """
 prefix nidm_ParameterEstimateMap: <http://purl.org/nidash/nidm#NIDM_0000061>
 
 SELECT DISTINCT * WHERE {
-    """ + oid_var + """ a nidm_ParameterEstimateMap: ;
+    """
+            + oid_var
+            + """ a nidm_ParameterEstimateMap: ;
         rdfs:label ?label ;
         nfo:fileName ?filename ;
         crypto:sha512 ?sha ;
         dct:format ?fmt .
 
-    OPTIONAL {""" + oid_var + """ prov:atLocation ?pe_file .} .
+    OPTIONAL {"""
+            + oid_var
+            + """ prov:atLocation ?pe_file .} .
 
-    OPTIONAL {""" + oid_var + """ prov:wasDerivedFrom ?derfrom_id .
+    OPTIONAL {"""
+            + oid_var
+            + """ prov:wasDerivedFrom ?derfrom_id .
 
     ?derfrom_id a nidm_ParameterEstimateMap: ;
         nfo:fileName ?derfrom_filename ;
@@ -642,13 +651,7 @@ SELECT DISTINCT * WHERE {
      } .
 }
         """
-
-#     ?derfrom_id a nidm_ParameterEstimateMap: ;
-# nfo:fileName ?derfrom_filename ;
-# dct:format ?derfrom_format ;
-# crypto:sha512 ?derfrom_sha . } .
-
-        return query
+        )
 
     # Generate prov for contrast map
     def export(self, nidm_version, export_dir):
@@ -684,7 +687,7 @@ class ResidualMeanSquares(NIDMObject):
         super(ResidualMeanSquares, self).__init__(oid=oid)
         self.coord_space = coord_space
         if filename is None:
-            filename = 'ResidualMeanSquares' + suffix + '.nii.gz'
+            filename = f'ResidualMeanSquares{suffix}.nii.gz'
         self.file = NIDMFile(self.id, residual_file, filename,
                              temporary=temporary, fmt=fmt, sha=sha)
         if label is None:
@@ -703,24 +706,25 @@ class ResidualMeanSquares(NIDMObject):
         self.isderfrommap = isderfrommap
 
     @classmethod
-    def get_query(klass, oid=None):
-        if oid is None:
-            oid_var = "?oid"
-        else:
-            oid_var = "<" + str(oid) + ">"
-
-        query = """
+    def get_query(cls, oid=None):
+        oid_var = "?oid" if oid is None else f"<{str(oid)}>"
+        return (
+            """
 prefix nidm_ResidualMeanSquaresMap: <http://purl.org/nidash/nidm#NIDM_0000066>
 
 SELECT DISTINCT * WHERE {
-    """ + oid_var + """ a nidm_ResidualMeanSquaresMap: ;
+    """
+            + oid_var
+            + """ a nidm_ResidualMeanSquaresMap: ;
         rdfs:label ?label ;
         nfo:fileName ?filename ;
         crypto:sha512 ?sha ;
         prov:atLocation ?residual_file ;
         dct:format ?fmt .
 
-    OPTIONAL {""" + oid_var + """ prov:wasDerivedFrom ?derfrom_id .
+    OPTIONAL {"""
+            + oid_var
+            + """ prov:wasDerivedFrom ?derfrom_id .
 
     ?derfrom_id a nidm_ResidualMeanSquaresMap: ;
         nfo:fileName ?derfrom_filename ;
@@ -730,7 +734,7 @@ SELECT DISTINCT * WHERE {
 
 }
         """
-        return query
+        )
 
     def export(self, nidm_version, export_dir):
         """
@@ -762,7 +766,7 @@ class ReselsPerVoxelMap(NIDMObject):
         super(ReselsPerVoxelMap, self).__init__(oid=oid)
         self.coord_space = coord_space
         if filename is None:
-            filename = 'ReselsPerVoxelMap' + suffix + '.nii.gz'
+            filename = f'ReselsPerVoxelMap{suffix}.nii.gz'
         self.file = NIDMFile(self.id, rpv_file, filename,
                              temporary=temporary, fmt=fmt, sha=sha)
         if label is None:
@@ -782,26 +786,29 @@ class ReselsPerVoxelMap(NIDMObject):
         self.isderfrommap = isderfrommap
 
     @classmethod
-    def get_query(klass, oid=None):
-        if oid is None:
-            oid_var = "?oid"
-        else:
-            oid_var = "<" + str(oid) + ">"
-
-        query = """
+    def get_query(cls, oid=None):
+        oid_var = "?oid" if oid is None else f"<{str(oid)}>"
+        return (
+            """
 prefix nidm_ReselsPerVoxelMap: <http://purl.org/nidash/nidm#NIDM_0000144>
 
 SELECT DISTINCT * WHERE {
-    """ + oid_var + """ a nidm_ReselsPerVoxelMap: ;
+    """
+            + oid_var
+            + """ a nidm_ReselsPerVoxelMap: ;
         rdfs:label ?label ;
         nfo:fileName ?filename ;
         crypto:sha512 ?sha ;
         prov:atLocation ?rpv_file ;
         dct:format ?fmt .
 
-    ?inf_id prov:used """ + oid_var + """ .
+    ?inf_id prov:used """
+            + oid_var
+            + """ .
 
-    OPTIONAL {""" + oid_var + """ prov:wasDerivedFrom ?derfrom_id .
+    OPTIONAL {"""
+            + oid_var
+            + """ prov:wasDerivedFrom ?derfrom_id .
 
     ?derfrom_id a nidm_ReselsPerVoxelMap: ;
         nfo:fileName ?derfrom_filename ;
@@ -810,7 +817,7 @@ SELECT DISTINCT * WHERE {
      } .
 }
         """
-        return query
+        )
 
     def export(self, nidm_version, export_dir):
         """
@@ -842,7 +849,7 @@ class MaskMap(NIDMObject):
         super(MaskMap, self).__init__(oid=oid)
         self.coord_space = coord_space
         if filename is None:
-            filename = 'Mask' + suffix + '.nii.gz'
+            filename = f'Mask{suffix}.nii.gz'
         self.file = NIDMFile(self.id, mask_file, filename,
                              sha=sha, fmt=fmt)
         self.user_defined = user_defined
@@ -862,18 +869,17 @@ class MaskMap(NIDMObject):
         self.isderfrommap = isderfrommap
 
     @classmethod
-    def get_query(klass, oid=None):
-        if oid is None:
-            oid_var = "?oid"
-        else:
-            oid_var = "<" + str(oid) + ">"
-
-        query = """
+    def get_query(cls, oid=None):
+        oid_var = "?oid" if oid is None else f"<{str(oid)}>"
+        return (
+            """
         prefix nidm_MaskMap: <http://purl.org/nidash/nidm#NIDM_0000054>
         prefix nidm_isUserDefined: <http://purl.org/nidash/nidm#NIDM_0000106>
 
         SELECT DISTINCT * WHERE {
-            """ + oid_var + """ a nidm_MaskMap: ;
+            """
+            + oid_var
+            + """ a nidm_MaskMap: ;
                 rdfs:label ?label ;
                 nidm_isUserDefined: ?user_defined ;
                 nfo:fileName ?filename ;
@@ -881,7 +887,9 @@ class MaskMap(NIDMObject):
                 prov:atLocation ?mask_file ;
                 dct:format ?fmt .
 
-            OPTIONAL {""" + oid_var + """ prov:wasDerivedFrom ?derfrom_id .
+            OPTIONAL {"""
+            + oid_var
+            + """ prov:wasDerivedFrom ?derfrom_id .
 
             ?derfrom_id a nidm_MaskMap: ;
                 nfo:fileName ?derfrom_filename ;
@@ -890,7 +898,7 @@ class MaskMap(NIDMObject):
              } .
         }
         """
-        return query
+        )
 
     def export(self, nidm_version, export_dir):
         """
@@ -921,7 +929,7 @@ class GrandMeanMap(NIDMObject):
                  fmt=None, masked_median=None, oid=None):
         super(GrandMeanMap, self).__init__(oid=oid)
         if filename is None:
-            filename = 'GrandMean' + suffix + '.nii.gz'
+            filename = f'GrandMean{suffix}.nii.gz'
         self.file = NIDMFile(self.id, org_file, filename,
                              sha=sha, fmt=fmt)
         self.mask_file = mask_file  # needed to compute masked median
@@ -934,18 +942,17 @@ class GrandMeanMap(NIDMObject):
         self.masked_median = masked_median
 
     @classmethod
-    def get_query(klass, oid=None):
-        if oid is None:
-            oid_var = "?oid"
-        else:
-            oid_var = "<" + str(oid) + ">"
-
-        query = """
+    def get_query(cls, oid=None):
+        oid_var = "?oid" if oid is None else f"<{str(oid)}>"
+        return (
+            """
         prefix nidm_GrandMeanMap: <http://purl.org/nidash/nidm#NIDM_0000033>
         prefix nidm_maskedMedian: <http://purl.org/nidash/nidm#NIDM_0000107>
 
         SELECT DISTINCT * WHERE {
-            """ + oid_var + """ a nidm_GrandMeanMap: ;
+            """
+            + oid_var
+            + """ a nidm_GrandMeanMap: ;
                 rdfs:label ?label ;
                 nidm_maskedMedian: ?masked_median;
                 prov:atLocation ?org_file ;
@@ -954,7 +961,7 @@ class GrandMeanMap(NIDMObject):
                 dct:format ?fmt .
         }
         """
-        return query
+        )
 
     def export(self, nidm_version, export_dir):
         """
